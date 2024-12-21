@@ -11,4 +11,5 @@ export default function UnityViewer() {
   });
 
   return <Unity unityProvider={unityProvider} className="w-full h-full"/>;
+  
 }
