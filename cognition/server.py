@@ -1,6 +1,7 @@
-from flask import Flask, request
+from flask import Flask, request, send_file
 from flask_cors import CORS
 import llm
+import voice
 
 app = Flask(__name__)
 CORS(app)
@@ -11,26 +12,19 @@ def hello_world():
 
 @app.route('/text', methods=['POST'])
 def hello_text():
-    print("You send a text to me")
     text = request.form['text']
+    print("You said: ", text)
 
     user_input = text
     print("Ask to llama")
     message = llm.chat_ai(user_input)
 
-    return message
+    voice.speech(message)
 
-@app.route('/voice', methods=['POST'])
-def hello_voice():
-    print("You send a voice to me")
-    voice = request.form['voice']
+    output_file_path = '../output.mp3'
 
-    user_input = voice
-    print("Ask to llama")
-    message = llm.chat_ai(user_input)
-
-    return message
-
+    # Return the output.mp3 file to the client
+    return send_file(output_file_path, mimetype='audio/mpeg')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
