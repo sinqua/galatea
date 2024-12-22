@@ -17,9 +17,12 @@ llm = Ollama(model="llama3.2")
 
 
 prompt = ChatPromptTemplate.from_messages([
-        ("system",""),
+        ("system","You are a helpful assistant. Please keep your answers short and to the point."),
         MessagesPlaceholder(variable_name="history"),
         ("human", "{input}"),
+        ("human", "Hello, how are you?"),
+        ("ai", "I'm doing well, thanks!"),
+        ("human", "That's good to hear."),
 ])
 
 runnable = prompt | llm
@@ -40,7 +43,7 @@ def chat_ai(user_input: str):
         config={
             "configurable": {"session_id": "abc123"}
         })
-    
     # supabase.table("ai_message").insert([{"message": output, "user_message_id": row_id, "memory_chip": memoryChip}]).execute()
 
+    print("AI response:", output)
     return output
