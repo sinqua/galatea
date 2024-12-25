@@ -9,10 +9,10 @@ export default function Home() {
     window.SpeechBlendWEBGL = {};
 
     window.AudioContext = (function(){
-      var ACConsructor = window.AudioContext || window.webkitAudioContext;
+      const ACConsructor = window.AudioContext || window.webkitAudioContext;
 
       return function(){
-        var ac = new ACConsructor();
+        const ac = new ACConsructor();
         window.SpeechBlendWEBGL.ac = ac;
         window.SpeechBlendWEBGL.a = ac.createAnalyser();
         window.SpeechBlendWEBGL.a.smoothingTimeConstant = 0;
