@@ -1,8 +1,8 @@
 'use client'
-import React from "react";
+import React, { useRef } from "react";
 import { Unity, useUnityContext } from "react-unity-webgl";
 
-export default function UnityViewer() {
+export default function UnityViewer({ className}: { className?: string }) {
   const { unityProvider } = useUnityContext({
     loaderUrl: "/experience/Build.loader.js",
     dataUrl: "/experience/Build.data",
@@ -10,6 +10,23 @@ export default function UnityViewer() {
     codeUrl: "/experience/Build.wasm",
   });
 
-  return <Unity unityProvider={unityProvider} className="w-full h-full"/>;
-  
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Use when matchWebGLToCanvasSize is false
+  // useEffect(() => {
+  //   if (canvasRef.current) {
+  //     const canvas = canvasRef.current.querySelector("canvas");
+  //     if (canvas) {
+  //       console.log('Resizing canvas to 720p');
+  //       canvas.width = 720;
+  //       canvas.height = 1280;
+  //     }
+  //   }
+  // }, []);
+
+  return (
+    <div ref={canvasRef} className={className} style={{ width: '100%', height: '100%'}} >
+      <Unity unityProvider={unityProvider} matchWebGLToCanvasSize={true} className={className}/>
+    </div>
+  );
 }
