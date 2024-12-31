@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
 interface InputFieldProps {
-  onSubmit: (value: string) => void;
+  onSubmit: (objectName: string, methodName: string, message: string) => void;
 }
 
 export default function InputField({ onSubmit }: InputFieldProps) {
@@ -14,7 +14,7 @@ export default function InputField({ onSubmit }: InputFieldProps) {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    onSubmit(inputValue);
+    onSubmit("GameManager", "GenerateVoice", inputValue);
     setInputValue("");
   };
 
