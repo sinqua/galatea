@@ -18,23 +18,26 @@ export default function Home() {
   useEffect(() => {
     window.SpeechBlendWEBGL = {} as SpeechBlendWEBGL;
 
-    const ACConstructor = window.AudioContext || window.webkitAudioContext;
+    window.AudioContext = (function(){
+      const ACConsructor = window.AudioContext || window.webkitAudioContext;
 
-    if (ACConstructor) {
-      const ac = new ACConstructor() as ExtendedAudioContext;
-      window.SpeechBlendWEBGL.ac = ac;
-      window.SpeechBlendWEBGL.a = ac.createAnalyser();
-      window.SpeechBlendWEBGL.a.smoothingTimeConstant = 0;
-      window.SpeechBlendWEBGL.fa = new Uint8Array(window.SpeechBlendWEBGL.a.frequencyBinCount); 
-      window.SpeechBlendWEBGL.la = new Uint8Array(window.SpeechBlendWEBGL.a.fftSize); 
-      window.SpeechBlendWEBGL.a.connect(ac.destination); 
-      
-      ac.actualDestination = ac.destination;
-      Object.defineProperty(ac, 'destination', { 
-        value: window.SpeechBlendWEBGL.a,
-        writable: false
-      });
-    }
+      return function(){
+        const ac = new ACConsructor() as ExtendedAudioContext;
+        window.SpeechBlendWEBGL.ac = ac;
+        window.SpeechBlendWEBGL.a = ac.createAnalyser();
+        window.SpeechBlendWEBGL.a.smoothingTimeConstant = 0;
+        window.SpeechBlendWEBGL.fa = new Uint8Array(window.SpeechBlendWEBGL.a.frequencyBinCount); 
+        window.SpeechBlendWEBGL.la = new Uint8Array(window.SpeechBlendWEBGL.a.fftSize); 
+        window.SpeechBlendWEBGL.a.connect(ac.destination); 
+        
+        ac.actualDestination = ac.destination;
+        Object.defineProperty(ac, 'destination', { 
+          value: window.SpeechBlendWEBGL.a,
+          writable: false
+        });   
+        return ac; 
+      }
+    })() as any; 
   }, []);
 
 
