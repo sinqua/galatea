@@ -3,7 +3,7 @@ import React, { useRef } from "react";
 import { Unity, useUnityContext } from "react-unity-webgl";
 
 export default function UnityViewer({ className}: { className?: string }) {
-  const { unityProvider } = useUnityContext({
+  const { unityProvider, sendMessage } = useUnityContext({
     loaderUrl: "/experience/Build.loader.js",
     dataUrl: "/experience/Build.data",
     frameworkUrl: "/experience/Build.framework.js",
