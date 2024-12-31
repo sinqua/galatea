@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
 interface InputFieldProps {
-  onSubmit: (value: string) => void;
+  onSubmit: (objectName: string, methodName: string, message: string) => void;
 }
 
 export default function InputField({ onSubmit }: InputFieldProps) {
@@ -13,25 +14,27 @@ export default function InputField({ onSubmit }: InputFieldProps) {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    onSubmit(inputValue);
+    onSubmit("GameManager", "GenerateVoice", inputValue);
     setInputValue("");
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="fixed bottom-0 left-0 z-10 w-full p-4"
-      style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }} // 배경색을 반투명하게 설정
+      className="fixed bottom-0 left-0 z-10 w-full p-4 flex items-center bg-white shadow-lg"
     >
       <input
         type="text"
         value={inputValue}
         onChange={handleChange}
-        className="border p-2 w-full"
+        className="flex-grow border border-gray-300 rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder="Enter text"
       />
-      <button type="submit" className="mt-2 p-2 bg-blue-500 text-white">
-        Submit
+      <button
+        type="submit"
+        className="ml-2 p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <PaperAirplaneIcon className="h-5 w-5 transform rotate-45" />
       </button>
     </form>
   );
