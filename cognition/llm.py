@@ -17,12 +17,11 @@ llm = Ollama(model="llama3.2")
 
 
 prompt = ChatPromptTemplate.from_messages([
-        ("system","You are a helpful assistant. Please keep your answers short and to the point."),
+        ("system","Please keep your answers short and to the point."),
         MessagesPlaceholder(variable_name="history"),
-        ("human", "{input}"),
         ("human", "Hello, how are you?"),
         ("ai", "I'm doing well, thanks!"),
-        ("human", "That's good to hear."),
+        ("human", "{input}"),
 ])
 
 runnable = prompt | llm

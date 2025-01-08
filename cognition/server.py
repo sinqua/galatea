@@ -21,7 +21,7 @@ def hello_text():
 
     voice.speech(message)
 
-    output_file_path = '../output.mp3'
+    output_file_path = 'output.mp3'
 
     # Return the output.mp3 file to the client
     return send_file(output_file_path, mimetype='audio/mpeg')
