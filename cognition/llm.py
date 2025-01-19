@@ -34,15 +34,11 @@ runnable_with_history = RunnableWithMessageHistory(
 )
 
 def chat_ai(user_input: str):
-    # result = supabase.table("user_message").insert([{"message": user_input, "memory_chip": memoryChip}]).execute()
-    # row_id = result.data[0]['id']
-
     output = runnable_with_history.invoke(
         {"input": user_input},
         config={
             "configurable": {"session_id": "abc123"}
         })
-    # supabase.table("ai_message").insert([{"message": output, "user_message_id": row_id, "memory_chip": memoryChip}]).execute()
 
     print("AI response:", output)
     return output
