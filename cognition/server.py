@@ -27,4 +27,4 @@ def hello_text():
     return send_file(output_file_path, mimetype='audio/mpeg')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=2174)
+    app.run(host='0.0.0.0', port=2173)

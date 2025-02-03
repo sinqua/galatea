@@ -10,8 +10,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             role TEXT,
-            content TEXT,
-            images TEXT
+            content TEXT
         )
     ''')
     conn.commit()
@@ -24,7 +23,7 @@ init_db()
 def save_message(role: str, content: str, images: str = None):
     conn = sqlite3.connect('ollama.db')
     c = conn.cursor()
-    c.execute('INSERT INTO messages (role, content, images) VALUES (?, ?, ?)', (role, content, images))
+    c.execute('INSERT INTO messages (role, content) VALUES (?, ?)', (role, content))
     conn.commit()
     conn.close()
 
@@ -32,14 +31,12 @@ def save_message(role: str, content: str, images: str = None):
 def load_messages() -> List[Dict[str, Any]]:
     conn = sqlite3.connect('ollama.db')
     c = conn.cursor()
-    c.execute('SELECT role, content, images FROM messages')
+    c.execute('SELECT role, content FROM messages')
     rows = c.fetchall()
     conn.close()
     messages = []
     for row in rows:
         message = {'role': row[0], 'content': row[1]}
-        if row[2]:
-            message['images'] = row[2]
         messages.append(message)
 
     initial_message = {'role': 'assistant', 'content': '안녕하세요! 무엇을 도와드릴까요?'}
@@ -47,20 +44,11 @@ def load_messages() -> List[Dict[str, Any]]:
 
     return messages
 
-def chat_ai(user_input: str = None, image_b64: str = None):
+def chat_ai(user_input):
     # 데이터베이스에서 메시지 불러오기
     messages = load_messages()
 
-    if image_b64:
-        # 이미지가 포함된 메시지 추가
-        content = [{
-            'role': 'user',
-            'content': user_input,
-            'images': [image_b64],
-        }]
-    else:
-        # 텍스트 메시지 추가
-        content = [{
+    content = [{
             'role': 'user',
             'content': user_input,
         }]
