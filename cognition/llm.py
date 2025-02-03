@@ -1,44 +1,79 @@
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_community.llms import Ollama
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import MessagesPlaceholder
-from langchain_community.chat_message_histories import SQLChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+import sqlite3
+from typing import List, Dict, Any
+from ollama import chat
 
-memoryChip = "sqlite:///unity6.db"
-# memoryChip = "sqlite:///memory.db"
+# 데이터베이스 초기화
+def init_db():
+    conn = sqlite3.connect('ollama.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role TEXT,
+            content TEXT,
+            images TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-def get_session_history(session_id):
-    return SQLChatMessageHistory(session_id, memoryChip)
+# 초기화
+init_db()
 
-# llm = Ollama(model="llama3.2:1b")
-llm = Ollama(model="llama3.2")
+# 메시지를 데이터베이스에 저장
+def save_message(role: str, content: str, images: str = None):
+    conn = sqlite3.connect('ollama.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO messages (role, content, images) VALUES (?, ?, ?)', (role, content, images))
+    conn.commit()
+    conn.close()
 
+# 데이터베이스에서 메시지를 불러오기
+def load_messages() -> List[Dict[str, Any]]:
+    conn = sqlite3.connect('ollama.db')
+    c = conn.cursor()
+    c.execute('SELECT role, content, images FROM messages')
+    rows = c.fetchall()
+    conn.close()
+    messages = []
+    for row in rows:
+        message = {'role': row[0], 'content': row[1]}
+        if row[2]:
+            message['images'] = row[2]
+        messages.append(message)
 
-prompt = ChatPromptTemplate.from_messages([
-        ("system","Please keep your answers short and to the point."),
-        MessagesPlaceholder(variable_name="history"),
-        ("human", "Hello, how are you?"),
-        ("ai", "I'm doing well, thanks!"),
-        ("human", "{input}"),
-])
+    initial_message = {'role': 'assistant', 'content': '안녕하세요! 무엇을 도와드릴까요?'}
+    messages.insert(0, initial_message)
 
-runnable = prompt | llm
+    return messages
 
-runnable_with_history = RunnableWithMessageHistory(
-    runnable,
-    get_session_history,
-    input_messages_key="input",
-    history_messages_key="history",
-)
+def chat_ai(user_input: str = None, image_b64: str = None):
+    # 데이터베이스에서 메시지 불러오기
+    messages = load_messages()
 
-def chat_ai(user_input: str):
-    output = runnable_with_history.invoke(
-        {"input": user_input},
-        config={
-            "configurable": {"session_id": "abc123"}
-        })
+    if image_b64:
+        # 이미지가 포함된 메시지 추가
+        content = [{
+            'role': 'user',
+            'content': user_input,
+            'images': [image_b64],
+        }]
+    else:
+        # 텍스트 메시지 추가
+        content = [{
+            'role': 'user',
+            'content': user_input,
+        }]
 
-    print("AI response:", output)
-    return output
+    response = chat(
+        'llama3.2',
+        messages = messages + content,
+    )
+
+    # 메시지를 데이터베이스에 저장
+    save_message('user', user_input)
+    save_message('assistant', response.message.content)
+
+    print(response.message.content + '\n')
+
+    return response.message.content
