@@ -1,7 +1,7 @@
 'use client'
 import { useEffect } from "react";
-import InputField from "./input-field";
 import { Unity, useUnityContext } from "react-unity-webgl";
+import InputHistory from "./input-history";
 
 interface ExtendedAudioContext extends AudioContext {
   actualDestination?: AudioNode;
@@ -40,15 +40,15 @@ export default function Home() {
     })() as any; 
   }, []);
 
-
-
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-grow w-full h-full">
         <div className="w-full min-h-screen" style={{ width: '100%', height: '100%'}} >
           <Unity unityProvider={unityProvider} matchWebGLToCanvasSize={true} className="w-full min-h-screen"/>
         </div>
-        <InputField onSubmit={sendMessage}/>
+        {/* <ChatHistory /> */}
+        <InputHistory onSubmit={sendMessage}/>
+        {/* <InputField onSubmit={sendMessage}/> */}
       </main>
     </div>
   );
