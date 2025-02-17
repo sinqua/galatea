@@ -57,7 +57,7 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
   return (
     <div className="flex flex-col h-full fixed bottom-0 left-0 w-full">
       <div className="flex-grow overflow-y-auto p-4 flex flex-col-reverse">
-        {messages.map((message) => (
+        {messages.slice().reverse().map((message) => (
           <div
             key={message.id}
             className={`mb-2 p-2 rounded-lg max-w-xs ${
