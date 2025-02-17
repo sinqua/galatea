@@ -26,5 +26,16 @@ def hello_text():
     # Return the output.mp3 file to the client
     return send_file(output_file_path, mimetype='audio/mpeg')
 
+@app.route('/textonly', methods=['POST'])
+def hello_text():
+    text = request.form['text']
+    print("You said: ", text)
+
+    user_input = text
+    print("Ask to llama")
+    message = llm.chat_ai(user_input)
+
+    return message
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=2173)
