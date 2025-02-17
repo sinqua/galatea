@@ -27,7 +27,7 @@ def hello_text():
     return send_file(output_file_path, mimetype='audio/mpeg')
 
 @app.route('/textonly', methods=['POST'])
-def hello_text():
+def hello_text2():
     text = request.form['text']
     print("You said: ", text)
 
