@@ -1,8 +1,6 @@
 'use client'
 import { useEffect } from "react";
-import InputField from "./input-field";
 import { Unity, useUnityContext } from "react-unity-webgl";
-import ChatHistory from "./chat-history";
 import InputHistory from "./input-history";
 
 interface ExtendedAudioContext extends AudioContext {
