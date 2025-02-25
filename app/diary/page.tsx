@@ -36,7 +36,7 @@ export default function DiaryPage() {
       const formData = new FormData();
       formData.append('text', content);
 
-      const response = await fetch('http://192.168.45.90:2173/textonly', {
+      const response = await fetch('https://server.galatea.my:2174/textonly', {
         method: 'POST',
         body: formData,
       });
