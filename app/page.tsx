@@ -2,6 +2,8 @@
 import { useEffect } from "react";
 import { Unity, useUnityContext } from "react-unity-webgl";
 import InputHistory from "./input-history";
+import Link from "next/link";
+import { BookOpenIcon } from "@heroicons/react/24/outline";
 
 interface ExtendedAudioContext extends AudioContext {
   actualDestination?: AudioNode;
@@ -46,9 +48,14 @@ export default function Home() {
         <div className="w-full min-h-screen" style={{ width: '100%', height: '100%'}} >
           <Unity unityProvider={unityProvider} matchWebGLToCanvasSize={true} className="w-full min-h-screen"/>
         </div>
-        {/* <ChatHistory /> */}
+        <Link 
+          href="/diary" 
+          className="fixed top-4 right-4 p-3 bg-white bg-opacity-80 rounded-full shadow-md hover:bg-opacity-100 transition-all z-10"
+          aria-label="Open diary"
+        >
+          <BookOpenIcon className="h-6 w-6 text-neutral-700" />
+        </Link>
         <InputHistory onSubmit={sendMessage}/>
-        {/* <InputField onSubmit={sendMessage}/> */}
       </main>
     </div>
   );
