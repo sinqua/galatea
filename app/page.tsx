@@ -98,12 +98,12 @@ export default function HomePage() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-light tracking-tight">My Journal</h1>
           <div className="flex items-center gap-4">
-            <Link href="/history" className="text-indigo-600 hover:text-indigo-900 text-sm flex items-center gap-1">
-              <ClockIcon className="h-4 w-4" />
+            <Link href="/history" className="text-indigo-600 hover:text-indigo-900 text-sm flex items-center gap-1" style={{padding: '0.25rem'}}>
+              <ClockIcon className="h-4 w-4" width={16} height={16}/>
               <span>History</span>
             </Link>
-            <Link href="/avatar" className="text-indigo-600 hover:text-indigo-900 text-sm flex items-center gap-1">
-              <UserIcon className="h-4 w-4" />
+            <Link href="/avatar" className="text-indigo-600 hover:text-indigo-900 text-sm flex items-center gap-1" style={{padding: '0.25rem'}}>
+              <UserIcon className="h-4 w-4" width={16} height={16}/>
               <span>Meet Galatea</span>
             </Link>
           </div>
