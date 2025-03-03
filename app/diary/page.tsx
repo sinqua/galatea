@@ -65,7 +65,9 @@ export default function DiaryPage() {
             &larr; Back
           </Link>
           <h1 className="text-3xl font-light tracking-tight">My Journal</h1>
-          <div className="w-10"></div> {/* 균형을 위한 빈 공간 */}
+          <Link href="/history" className="text-indigo-600 hover:text-indigo-900 text-sm">
+            View History
+          </Link>
         </div>
       </header>
 

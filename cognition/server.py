@@ -1,7 +1,8 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
 import llm
 import voice
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -36,6 +37,11 @@ def hello_text2():
     message = llm.chat_ai(user_input)
 
     return message
+
+@app.route('/history', methods=['GET'])
+def get_history():
+    history = llm.get_history()
+    return jsonify(history)  # 응답을 JSON으로 직렬화
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=2173)

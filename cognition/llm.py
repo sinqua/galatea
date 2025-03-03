@@ -62,3 +62,18 @@ def chat_ai(user_input):
     print(response.message.content + '\n')
 
     return response.message.content
+
+def get_history():
+    messages = load_messages()
+
+    history = []
+    user_message = None
+
+    for message in messages:
+        if message['role'] == 'user':
+            user_message = message['content']
+        elif message['role'] == 'assistant' and user_message:
+            history.append({'user': user_message, 'assistant': message['content']})
+            user_message = None
+
+    return history  # 배열 형태로 반환
