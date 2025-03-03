@@ -45,19 +45,23 @@ def chat_ai(user_input):
     # 데이터베이스에서 메시지 불러오기
     messages = load_messages()
 
-    save_message('user', user_input)
     content = [{
-        'role': 'user',
-        'content': user_input,
-    }]
+            'role': 'user',
+            'content': user_input,
+        }]
 
-    response_content = ""
-    for part in chat('deepseek-r1:32b', messages=messages + content, stream=True):
-        chunk = part['message']['content']
-        response_content += chunk
-        yield chunk  # 스트림으로 반환
+    response = chat(
+        'llama3.2',
+        messages = messages + content,
+    )
 
-    save_message('assistant', response_content)
+    # 메시지를 데이터베이스에 저장
+    save_message('user', user_input)
+    save_message('assistant', response.message.content)
+
+    print(response.message.content + '\n')
+
+    return response.message.content
 
 def chat_ai_stream(user_input) -> Generator[str, None, None]:
     """토큰 단위로 스트리밍 방식 AI 응답을 생성하는 함수"""
