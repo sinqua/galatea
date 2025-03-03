@@ -1,5 +1,5 @@
 import sqlite3
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Generator
 from ollama import chat
 
 # 데이터베이스 초기화
@@ -45,23 +45,52 @@ def chat_ai(user_input):
     # 데이터베이스에서 메시지 불러오기
     messages = load_messages()
 
+    save_message('user', user_input)
+    content = [{
+        'role': 'user',
+        'content': user_input,
+    }]
+
+    response_content = ""
+    for part in chat('deepseek-r1:32b', messages=messages + content, stream=True):
+        chunk = part['message']['content']
+        response_content += chunk
+        yield chunk  # 스트림으로 반환
+
+    save_message('assistant', response_content)
+
+def chat_ai_stream(user_input) -> Generator[str, None, None]:
+    """토큰 단위로 스트리밍 방식 AI 응답을 생성하는 함수"""
+    # 데이터베이스에서 메시지 불러오기
+    messages = load_messages()
+
     content = [{
             'role': 'user',
             'content': user_input,
         }]
-
-    response = chat(
-        'deepseek-r1:32b',
-        messages = messages + content,
-    )
-
-    # 메시지를 데이터베이스에 저장
+    
+    # 사용자 메시지 저장
     save_message('user', user_input)
-    save_message('assistant', response.message.content)
-
-    print(response.message.content + '\n')
-
-    return response.message.content
+    
+    full_response = ""
+    
+    print(f"스트리밍 시작: {user_input}")
+    
+    # 스트림 모드로 응답 받기
+    for chunk in chat(
+        'deepseek-r1:32b',
+        messages=messages + content,
+        stream=True
+    ):
+        if chunk.message and chunk.message.content:
+            content_chunk = chunk.message.content
+            full_response += content_chunk
+            yield content_chunk
+    
+    print(f"스트리밍 완료: {full_response}")
+    
+    # 완성된 응답을 데이터베이스에 저장
+    save_message('assistant', full_response)
 
 def get_history():
     messages = load_messages()
