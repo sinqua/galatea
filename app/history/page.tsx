@@ -20,12 +20,13 @@ export default function HistoryPage() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/history`);
         if (response.ok) {
           const data = await response.json();
-          setHistory(data);
+            setHistory(data.reverse());
         } else {
           console.error('History fetch failed:', response.statusText);
         }
       } catch (error) {
         console.error('Error fetching history:', error);
+        setError(error instanceof Error ? error.message : String(error));
       } finally {
         setIsLoading(false);
       }
