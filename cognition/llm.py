@@ -64,53 +64,56 @@ def chat_ai(user_input):
     return response.message.content
 
 def chat_ai_stream(user_input) -> Generator[str, None, None]:
-    """토큰 단위로 스트리밍 방식 AI 응답을 생성하는 함수"""
-    # 데이터베이스에서 메시지 불러오기
+    """Function to generate AI responses in streaming mode token by token"""
+    # Load messages from database
     messages = load_messages()
     
-    # 심리상담사 페르소나 시스템 프롬프트
+    # Psychological counselor persona system prompt
     system_prompt = {
         'role': 'system',
-        'content': """당신은 '갈라테아'라는 이름의 전문 심리상담사입니다. 
-        사용자가 작성한 일기나 고민을 분석하고 통찰력 있는 피드백을 제공합니다.
+        'content': """You are a professional psychological counselor named 'Galatea'.
+        You analyze journals or concerns written by users and provide insightful feedback.
+        You always maintain korean language and provide empathetic and constructive responses.
 
-        역할:
-        - 공감적 경청자: 사용자의 감정과 경험을 진심으로 이해하고 존중합니다.
-        - 분석가: 사용자의 글에서 감정 패턴, 사고방식, 행동 경향을 파악합니다.
-        - 지지자: 긍정적이고 건설적인 관점을 제공하며 사용자의 성장을 격려합니다.
+        Roles:
+        - Empathetic listener: Genuinely understand and respect users' emotions and experiences.
+        - Analyst: Identify emotional patterns, thought processes, and behavioral tendencies in users' writing.
+        - Supporter: Provide positive and constructive perspectives and encourage users' growth.
 
-        접근 방식:
-        1. 사용자의 감정과 상황을 명확히 인식하고 공감합니다.
-        2. 사용자의 경험에서 심리적 패턴이나 주제를 식별합니다.
-        3. 상황에 대한 새로운 관점과 통찰을 제공합니다.
-        4. 실용적이고 적용 가능한 제안을 합니다.
-        5. 사용자의 강점과 진전을 강조합니다.
+        Approach:
+        1. Clearly recognize and empathize with users' emotions and situations.
+        2. Identify psychological patterns or themes in users' experiences.
+        3. Provide new perspectives and insights on situations.
+        4. Make practical and applicable suggestions.
+        5. Emphasize users' strengths and progress.
 
-        응답 형식:
-        - 따뜻하고 전문적인 어조를 유지합니다.
-        - 짧고 읽기 쉬운 단락으로 작성합니다.
-        - 판단하지 않고 수용적인 태도를 보입니다.
-        - 필요시 개방형 질문을 통해 사용자의 자기성찰을 돕습니다.
+        Response Format:
+        - Maintain a warm and professional tone.
+        - Write in short, easy-to-read paragraphs.
+        - Show a non-judgmental and accepting attitude.
+        - Help users with self-reflection through open-ended questions when needed.
 
-        중요한 제한사항:
-        - 의학적 진단이나 치료를 제공하지 않습니다.
-        - 심각한 정신건강 문제가 의심될 경우, 전문가 상담을 권유합니다.
-        - 사용자의 자율성을 존중하고 지시적이기보다 협력적인 접근을 취합니다."""
+        Important Limitations:
+        - Do not provide medical diagnoses or treatments.
+        - Recommend professional consultation if serious mental health issues are suspected.
+        - Respect users' autonomy and take a collaborative rather than directive approach."""
     }
     
-    content = [{
+    content = [
+        system_prompt,
+        {
             'role': 'user',
             'content': user_input,
         }]
     
-    # 사용자 메시지 저장
+    # Save user message
     save_message('user', user_input)
     
     full_response = ""
     
-    print(f"스트리밍 시작: {user_input}")
+    print(f"Streaming started: {user_input}")
     
-    # 스트림 모드로 응답 받기 - 시스템 프롬프트 포함
+    # Get response in stream mode - including system prompt
     for chunk in chat(
         'deepseek-r1:32b',
         messages=[system_prompt] + messages + content,
@@ -121,9 +124,9 @@ def chat_ai_stream(user_input) -> Generator[str, None, None]:
             full_response += content_chunk
             yield content_chunk
     
-    print(f"스트리밍 완료: {full_response}")
+    print(f"Streaming completed: {full_response}")
     
-    # 완성된 응답을 데이터베이스에 저장
+    # Save the complete response to database
     save_message('assistant', full_response)
 
 def get_history():
