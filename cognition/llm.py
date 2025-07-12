@@ -4,7 +4,7 @@ from ollama import chat
 
 # 데이터베이스 초기화
 def init_db():
-    conn = sqlite3.connect('journal.db')
+    conn = sqlite3.connect('interview.db')
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS messages (
@@ -21,7 +21,7 @@ init_db()
 
 # 메시지를 데이터베이스에 저장
 def save_message(role: str, content: str, images: str = None):
-    conn = sqlite3.connect('journal.db')
+    conn = sqlite3.connect('interview.db')
     c = conn.cursor()
     c.execute('INSERT INTO messages (role, content) VALUES (?, ?)', (role, content))
     conn.commit()
@@ -29,7 +29,7 @@ def save_message(role: str, content: str, images: str = None):
 
 # 데이터베이스에서 메시지를 불러오기
 def load_messages() -> List[Dict[str, Any]]:
-    conn = sqlite3.connect('journal.db')
+    conn = sqlite3.connect('interview.db')
     c = conn.cursor()
     c.execute('SELECT role, content FROM messages')
     rows = c.fetchall()
@@ -51,7 +51,7 @@ def chat_ai(user_input):
         }]
 
     response = chat(
-        'llama3.2',
+        'llama3:8b',
         messages = messages + content,
     )
 

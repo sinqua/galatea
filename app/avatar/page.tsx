@@ -48,7 +48,7 @@ export default function AvatarPage() {
         <div className="w-full min-h-screen" style={{ width: '100%', height: '100%'}} >
           <Unity unityProvider={unityProvider} matchWebGLToCanvasSize={true} className="w-full min-h-screen"/>
         </div>
-        <div className="fixed top-4 right-4 flex gap-2 z-10">
+        {/* <div className="fixed top-4 right-4 flex gap-2 z-10">
           <Link 
             href="/" 
             className="p-3 bg-white bg-opacity-80 rounded-full shadow-md hover:bg-opacity-100 transition-all"
@@ -63,7 +63,7 @@ export default function AvatarPage() {
           >
             <ClockIcon className="h-6 w-6 text-neutral-700" />
           </Link>
-        </div>
+        </div> */}
         <InputHistory onSubmit={sendMessage}/>
       </main>
     </div>

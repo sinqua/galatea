@@ -29,14 +29,21 @@ def hello_text():
 
 @app.route('/textonly', methods=['POST'])
 def hello_text2():
-    text = request.form['text']
-    print("You said: ", text)
+    if request.is_json:
+        data = request.get_json()
+        text = data.get('text', '')
+    else:
+        text = request.form.get('text', '')
 
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+
+    print("You said: ", text)
     user_input = text
     print("Ask to llama")
     message = llm.chat_ai(user_input)
 
-    return message
+    return jsonify({'message': message})
 
 @app.route('/history', methods=['GET'])
 def get_history():
