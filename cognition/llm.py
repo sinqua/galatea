@@ -51,7 +51,7 @@ def chat_ai(user_input):
         }]
 
     response = chat(
-        'llama3:8b',
+        'llama3.1:8b',
         messages = messages + content,
     )
 
