@@ -53,6 +53,9 @@ def chat_ai(user_input):
     response = chat(
         'llama3.1:8b',
         messages = messages + content,
+        options={
+            'num_ctx': 30000,
+        }
     )
 
     # 메시지를 데이터베이스에 저장
