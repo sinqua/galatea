@@ -33,7 +33,6 @@ def hello_text2():
     print("You said: ", text)
 
     user_input = text
-    print("Ask to llama")
     message = llm.chat_ai(user_input)
 
     return message

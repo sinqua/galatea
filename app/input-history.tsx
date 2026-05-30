@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
 interface InputHistoryProps {
@@ -8,11 +8,17 @@ interface InputHistoryProps {
 interface ChatMessage {
   id: number;
   text: string;
+  sender: 'user' | 'ai';
 }
 
 const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -23,26 +29,27 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
       const newMessage: ChatMessage = {
         id: messages.length + 1,
         text: inputValue,
+        sender: 'user',
       };
       setMessages([...messages, newMessage]);
       onSubmit("GameManager", "GenerateVoice", inputValue);
 
-      // POST request to the server
+      // POST request to the server.
+      // URLSearchParams를 body로 쓰면 fetch가 Content-Type을
+      // application/x-www-form-urlencoded로 설정 → 서버의 request.form['text']와 일치
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/textonly`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: inputValue }),
+        body: new URLSearchParams({ text: inputValue }),
       });
 
-      console.log(response);
-      const result = await response.json();
+      // /textonly는 순수 텍스트(AI 응답)를 반환하므로 text()로 읽음
+      const result = await response.text();
       const serverMessage: ChatMessage = {
         id: messages.length + 2,
-        text: result.message,
+        text: result,
+        sender: 'ai',
       };
-      console.log(result.message);
+      console.log(result);
       setMessages((prevMessages) => [...prevMessages, serverMessage]);
 
       setInputValue('');
@@ -56,12 +63,20 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
 
   return (
     <div className="flex flex-col h-full fixed bottom-0 left-0 w-full">
-      <div className="flex-grow overflow-y-auto p-4 flex flex-col-reverse">
+      <div className="flex-grow overflow-y-auto p-4 flex flex-col">
         {messages.map((message) => (
-          <div key={message.id} className="mb-2 p-2 bg-blue-500 text-white rounded-lg self-end max-w-xs">
+          <div
+            key={message.id}
+            className={`mb-2 p-2 rounded-lg max-w-xs whitespace-pre-wrap ${
+              message.sender === 'user'
+                ? 'bg-blue-500 text-white self-end'
+                : 'bg-gray-200 text-gray-900 self-start dark:bg-gray-700 dark:text-white'
+            }`}
+          >
             {message.text}
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
       <form
         onSubmit={handleSubmit}
