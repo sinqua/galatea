@@ -6,7 +6,7 @@ from flask import Flask, request, make_response
 import llm
 
 app = Flask(__name__)
-ALLOWED_ORIGIN = 'https://galatea-git-capstone-sinquas-projects.vercel.app'
+ALLOWED_ORIGIN = os.getenv('ALLOWED_ORIGIN', '*')
 
 @app.route('/', methods=['GET'])
 def hello_world():

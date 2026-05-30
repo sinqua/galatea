@@ -39,7 +39,7 @@ Important Limitations:
 - Respect users' autonomy and take a collaborative rather than directive approach."""
 
 # 데이터베이스 초기화
-DB_PATH = '/tmp/journal.db'
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'journal.db')
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
