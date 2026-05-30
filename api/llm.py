@@ -1,9 +1,8 @@
 import os
 import sqlite3
-from typing import List, Dict, Any, Generator
+from typing import List, Dict, Any
 import anthropic
 from dotenv import load_dotenv
-from ollama import chat
 
 # 프로젝트 루트(cognition의 상위)의 .env를 로드 — 실행 위치와 무관하게 동작
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -104,59 +103,3 @@ def chat_ai(user_input):
     print(reply + '\n')
 
     return reply
-
-def chat_ai_stream(user_input) -> Generator[str, None, None]:
-    """Function to generate AI responses in streaming mode token by token"""
-    # Load messages from database
-    messages = load_messages()
-    
-    # Psychological counselor persona system prompt (shared module-level constant)
-    system_prompt = {
-        'role': 'system',
-        'content': SYSTEM_PROMPT,
-    }
-    
-    content = [
-        system_prompt,
-        {
-            'role': 'user',
-            'content': user_input,
-        }]
-    
-    # Save user message
-    save_message('user', user_input)
-    
-    full_response = ""
-    
-    print(f"Streaming started: {user_input}")
-    
-    # Get response in stream mode - including system prompt
-    for chunk in chat(
-        'deepseek-r1:32b',
-        messages=[system_prompt] + messages + content,
-        stream=True
-    ):
-        if chunk.message and chunk.message.content:
-            content_chunk = chunk.message.content
-            full_response += content_chunk
-            yield content_chunk
-    
-    print(f"Streaming completed: {full_response}")
-    
-    # Save the complete response to database
-    save_message('assistant', full_response)
-
-def get_history():
-    messages = load_messages()
-
-    history = []
-    user_message = None
-
-    for message in messages:
-        if message['role'] == 'user':
-            user_message = message['content']
-        elif message['role'] == 'assistant' and user_message:
-            history.append({'user': user_message, 'assistant': message['content']})
-            user_message = None
-
-    return history  # 배열 형태로 반환
