@@ -2,23 +2,28 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, request
-from flask_cors import CORS
+from flask import Flask, request, make_response
 import llm
 
 app = Flask(__name__)
-CORS(app)
+ALLOWED_ORIGIN = 'https://galatea-git-capstone-sinquas-projects.vercel.app'
 
 @app.route('/', methods=['GET'])
 def hello_world():
     return 'Hello, World!'
 
-@app.route('/textonly', methods=['POST'])
+@app.route('/textonly', methods=['POST', 'OPTIONS'], strict_slashes=False)
 def hello_text2():
+    if request.method == 'OPTIONS':
+        res = make_response()
+        res.headers['Access-Control-Allow-Origin'] = ALLOWED_ORIGIN
+        res.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        res.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return res
+
     text = request.form['text']
-    print("You said: ", text)
+    message = llm.chat_ai(text)
 
-    user_input = text
-    message = llm.chat_ai(user_input)
-
-    return message
+    res = make_response(message)
+    res.headers['Access-Control-Allow-Origin'] = ALLOWED_ORIGIN
+    return res
