@@ -62,12 +62,12 @@ const InputHistory: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full fixed bottom-0 left-0 w-full">
+    <div className="flex flex-col h-full fixed bottom-0 left-0 w-full pointer-events-none">
       <div className="flex-grow overflow-y-auto p-4 flex flex-col">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`mb-2 p-2 rounded-lg max-w-xs whitespace-pre-wrap ${
+            className={`mb-2 p-2 rounded-lg max-w-xs whitespace-pre-wrap pointer-events-auto ${
               message.sender === 'user'
                 ? 'bg-blue-500 text-white self-end'
                 : 'bg-gray-200 text-gray-900 self-start dark:bg-gray-700 dark:text-white'
@@ -80,7 +80,7 @@ const InputHistory: React.FC = () => {
       </div>
       <form
         onSubmit={handleSubmit}
-        className="flex p-4 bg-white dark:bg-gray-800 shadow-lg"
+        className="flex p-4 bg-white dark:bg-gray-800 shadow-lg pointer-events-auto"
       >
         <input
           type="text"
