@@ -11,7 +11,7 @@ interface ChatMessage {
   sender: 'user' | 'ai';
 }
 
-const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
+const InputHistory: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -32,7 +32,7 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
         sender: 'user',
       };
       setMessages([...messages, newMessage]);
-      onSubmit("GameManager", "GenerateVoice", inputValue);
+      // onSubmit("GameManager", "GenerateVoice", inputValue);
 
       // POST request to the server.
       // URLSearchParams를 body로 쓰면 fetch가 Content-Type을
