@@ -12,7 +12,7 @@ import { LoadMixamoAnimation } from "@/utils/LoadMixamoAnimation";
 import { useLipsync } from "@/utils/useLipsync";
 
 interface VRMAvatarProps {
-  onReady?: (speak: (text: string) => void) => void;
+  onReady?: (speak: (audioBlob: Blob) => void) => void;
 }
 
 function VRMAvatar({ onReady }: VRMAvatarProps) {
@@ -104,10 +104,8 @@ function VRMAvatar({ onReady }: VRMAvatarProps) {
   }, [mixer, clips]);
 
   const getVrm = useCallback(() => vrmRef.current, []);
-  const { speak, update: lipsyncUpdate, preload } = useLipsync(getVrm);
+  const { speak, update: lipsyncUpdate } = useLipsync(getVrm);
 
-  // SDK 미리 로드
-  useEffect(() => { preload(); }, [preload]);
 
   // VRM 준비되면 speak 함수를 부모에 노출
   useEffect(() => {
@@ -124,8 +122,8 @@ function VRMAvatar({ onReady }: VRMAvatarProps) {
 }
 
 export default function AvatarPage() {
-  const speakRef = useRef<((text: string) => void) | null>(null);
-  const handleReady = useCallback((speak: (text: string) => void) => {
+  const speakRef = useRef<((audioBlob: Blob) => void) | null>(null);
+  const handleReady = useCallback((speak: (audioBlob: Blob) => void) => {
     speakRef.current = speak;
   }, []);
 
@@ -167,7 +165,7 @@ export default function AvatarPage() {
             <ClockIcon className="h-6 w-6 text-neutral-700" />
           </Link>
         </div>
-      <InputHistory onAIResponse={(text) => speakRef.current?.(text)} />
+      <InputHistory onAIResponse={(audioBlob) => speakRef.current?.(audioBlob)} />
       </main>
     </div>
   );

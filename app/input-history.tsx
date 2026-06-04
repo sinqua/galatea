@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
 interface InputHistoryProps {
-  onAIResponse?: (text: string) => void;
+  onAIResponse?: (audioBlob: Blob, text: string) => void;
 }
 
 interface ChatMessage {
@@ -34,23 +34,22 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
       setMessages([...messages, newMessage]);
       // onSubmit("GameManager", "GenerateVoice", inputValue);
 
-      // POST request to the server.
-      // URLSearchParams를 body로 쓰면 fetch가 Content-Type을
-      // application/x-www-form-urlencoded로 설정 → 서버의 request.form['text']와 일치
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/textonly`, {
+      // /voice 엔드포인트: MP3 오디오 반환, AI 텍스트는 X-AI-Text 헤더에 포함
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/voice`, {
         method: 'POST',
         body: new URLSearchParams({ text: inputValue }),
       });
 
-      // /textonly는 순수 텍스트(AI 응답)를 반환하므로 text()로 읽음
-      const result = await response.text();
+      const aiText = response.headers.get('X-AI-Text') ?? '';
+      const audioBlob = await response.blob();
+
       const serverMessage: ChatMessage = {
         id: messages.length + 2,
-        text: result,
+        text: aiText,
         sender: 'ai',
       };
       setMessages((prevMessages) => [...prevMessages, serverMessage]);
-      onAIResponse?.(result);
+      onAIResponse?.(audioBlob, aiText);
 
       setInputValue('');
     }

@@ -21,7 +21,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-unity-webgl": "^9.7.0",
-    "three": "^0.184.0"
+    "three": "^0.184.0",
+    "wawa-lipsync": "^0.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
