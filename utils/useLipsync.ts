@@ -78,25 +78,35 @@ export function useLipsync(getVrm: () => VRM | null) {
     audio.onerror = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
 
     try {
-      lipsyncRef.current.connectAudio(audio);
+      // wawa-lipsync의 내부 AudioContext와 analyser에 직접 접근
+      const ctx = (lipsyncRef.current as any).audioContext as AudioContext;
+      const analyser = (lipsyncRef.current as any).analyser as AnalyserNode;
 
-      // connectAudio가 analyser → destination을 연결한 뒤,
-      // analyser와 destination 사이에 GainNode를 삽입해서 볼륨 부스트
+      // GainNode를 한 번만 생성 — analyser → gain → destination
       if (!gainNodeRef.current) {
-        const ctx = (lipsyncRef.current as any).audioContext as AudioContext;
-        const analyser = (lipsyncRef.current as any).analyser as AnalyserNode;
-        analyser.disconnect(ctx.destination);
         const gain = ctx.createGain();
         gain.gain.value = DEFAULT_VOLUME;
-        analyser.connect(gain);
         gain.connect(ctx.destination);
         gainNodeRef.current = gain;
-        console.log('[Lipsync] GainNode 삽입 완료, volume =', DEFAULT_VOLUME);
+        console.log('[Lipsync] GainNode 생성, volume =', DEFAULT_VOLUME);
       }
 
+      // wawa-lipsync의 connectAudio는 내부적으로
+      // MediaElementSource → analyser → ctx.destination 을 연결함.
+      // 그 뒤 analyser의 destination 연결만 끊고 gainNode로 교체
+      lipsyncRef.current.connectAudio(audio);
+
+      try {
+        analyser.disconnect(ctx.destination);
+      } catch (_) {
+        // 이미 끊겨 있으면 무시
+      }
+      analyser.connect(gainNodeRef.current);
+
       await audio.play();
+      console.log('[Lipsync] 재생 시작, gain =', gainNodeRef.current.gain.value);
     } catch (e) {
-      console.error('[Lipsync] audio.play() 실패 (autoplay 차단?)', e);
+      console.error('[Lipsync] 재생 실패:', e);
     }
   }, [getVrm]);
 
