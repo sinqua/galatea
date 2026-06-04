@@ -117,7 +117,7 @@ function VRMAvatar({ onReady }: VRMAvatarProps) {
   useFrame((_, delta) => {
     mixer?.update(delta);
     vrm?.update(delta);
-    lipsyncUpdate(delta);
+    lipsyncUpdate();
   });
 
   return null;

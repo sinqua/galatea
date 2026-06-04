@@ -83,7 +83,7 @@ export function useLipsync(getVrm: () => VRM | null) {
   }, [getVrm]);
 
   // useFrame에서 호출할 업데이트 함수
-  const update = useCallback((_dt: number) => {
+  const update = useCallback(() => {
     const vrm = getVrm();
     if (!vrm || !trackRef.current || startTimeRef.current === null) return;
 
