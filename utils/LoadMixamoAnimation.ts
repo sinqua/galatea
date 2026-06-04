@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { mixamoVRMRigMap } from "./MixamoVrmRigMap";
 
 export function LoadMixamoAnimation(url: any, vrm: any) {
