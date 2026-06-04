@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
 interface InputHistoryProps {
-  onSubmit: (objectName: string, methodName: string, message: string) => void;
+  onAIResponse?: (text: string) => void;
 }
 
 interface ChatMessage {
@@ -11,7 +11,7 @@ interface ChatMessage {
   sender: 'user' | 'ai';
 }
 
-const InputHistory: React.FC = () => {
+const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -49,8 +49,8 @@ const InputHistory: React.FC = () => {
         text: result,
         sender: 'ai',
       };
-      console.log(result);
       setMessages((prevMessages) => [...prevMessages, serverMessage]);
+      onAIResponse?.(result);
 
       setInputValue('');
     }

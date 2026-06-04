@@ -16,6 +16,7 @@
     "@types/three": "^0.184.1",
     "axios": "^1.8.1",
     "date-fns": "^4.1.0",
+    "lipsync-sdk": "^1.3.9",
     "next": "15.1.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

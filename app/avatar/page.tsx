@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -9,11 +9,17 @@ import Link from "next/link";
 import { ClockIcon, HomeIcon } from "@heroicons/react/24/outline";
 import InputHistory from "../input-history";
 import { LoadMixamoAnimation } from "@/utils/LoadMixamoAnimation";
+import { useLipsync } from "@/utils/useLipsync";
 
-function VRMAvatar() {
+interface VRMAvatarProps {
+  onReady?: (speak: (text: string) => void) => void;
+}
+
+function VRMAvatar({ onReady }: VRMAvatarProps) {
   const { scene } = useThree();
   const [vrm, setVrm] = useState<VRM | null>(null);
   const [clips, setClips] = useState<Record<string, THREE.AnimationClip>>({});
+  const vrmRef = useRef<VRM | null>(null);
 
   const mixer = useMemo(() => {
     if (!vrm) return null;
@@ -38,6 +44,7 @@ function VRMAvatar() {
 
         loaded.scene.rotation.y = Math.PI;
         scene.add(loaded.scene);
+        vrmRef.current = loaded;
         setVrm(loaded);
       },
       undefined,
@@ -96,15 +103,32 @@ function VRMAvatar() {
     return () => mixer.removeEventListener("finished", onFinished);
   }, [mixer, clips]);
 
+  const getVrm = useCallback(() => vrmRef.current, []);
+  const { speak, update: lipsyncUpdate, preload } = useLipsync(getVrm);
+
+  // SDK 미리 로드
+  useEffect(() => { preload(); }, [preload]);
+
+  // VRM 준비되면 speak 함수를 부모에 노출
+  useEffect(() => {
+    if (vrm) onReady?.(speak);
+  }, [vrm, speak, onReady]);
+
   useFrame((_, delta) => {
     mixer?.update(delta);
     vrm?.update(delta);
+    lipsyncUpdate(delta);
   });
 
   return null;
 }
 
 export default function AvatarPage() {
+  const speakRef = useRef<((text: string) => void) | null>(null);
+  const handleReady = useCallback((speak: (text: string) => void) => {
+    speakRef.current = speak;
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-grow w-full h-full">
@@ -116,7 +140,7 @@ export default function AvatarPage() {
             <ambientLight intensity={0.8} />
             <directionalLight position={[1, 2, 2]} intensity={2.2} />
             <Suspense fallback={null}>
-              <VRMAvatar />
+              <VRMAvatar onReady={handleReady} />
             </Suspense>
             <OrbitControls
               target={[0, 1, 0]}
@@ -143,7 +167,7 @@ export default function AvatarPage() {
             <ClockIcon className="h-6 w-6 text-neutral-700" />
           </Link>
         </div>
-      <InputHistory />
+      <InputHistory onAIResponse={(text) => speakRef.current?.(text)} />
       </main>
     </div>
   );
