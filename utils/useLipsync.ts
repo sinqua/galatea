@@ -22,10 +22,12 @@ const VISEME_TO_VRM: Partial<Record<VISEMES, { name: string; weight: number }[]>
 
 const VRM_VISEME_NAMES = ["aa", "ih", "ou", "ee", "oh"] as const;
 
+const DEFAULT_VOLUME = 1.5; // 1.0 이상으로 부스트 가능
+
 export function useLipsync(getVrm: () => VRM | null) {
   const lipsyncRef = useRef<Lipsync | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // 디버그용 — 외부에서 읽을 수 있도록 ref로 노출
+  const gainNodeRef = useRef<GainNode | null>(null);
   const debugRef = useRef({
     audioState: 'idle' as 'idle' | 'playing' | 'ended' | 'error',
     viseme: 'viseme_sil',
@@ -36,7 +38,7 @@ export function useLipsync(getVrm: () => VRM | null) {
   useEffect(() => {
     lipsyncRef.current = new Lipsync({ fftSize: 2048, historySize: 10 });
     console.log('[Lipsync] 초기화 완료');
-    return () => { lipsyncRef.current = null; };
+    return () => { lipsyncRef.current = null; gainNodeRef.current = null; };
   }, []);
 
   const speak = useCallback(async (audioBlob: Blob) => {
@@ -61,7 +63,6 @@ export function useLipsync(getVrm: () => VRM | null) {
       return;
     }
 
-    // 이전 오디오 정리
     if (audioRef.current) {
       audioRef.current.pause();
       URL.revokeObjectURL(audioRef.current.src);
@@ -72,13 +73,27 @@ export function useLipsync(getVrm: () => VRM | null) {
     audio.src = url;
     audioRef.current = audio;
 
-    audio.onplay    = () => { debugRef.current.audioState = 'playing'; console.log('[Lipsync] 오디오 재생 시작'); };
-    audio.onended   = () => { debugRef.current.audioState = 'ended';   console.log('[Lipsync] 오디오 재생 완료'); };
-    audio.onerror   = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
+    audio.onplay  = () => { debugRef.current.audioState = 'playing'; console.log('[Lipsync] 오디오 재생 시작'); };
+    audio.onended = () => { debugRef.current.audioState = 'ended';   console.log('[Lipsync] 오디오 재생 완료'); };
+    audio.onerror = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
 
     try {
       lipsyncRef.current.connectAudio(audio);
-      console.log('[Lipsync] connectAudio 완료');
+
+      // connectAudio가 analyser → destination을 연결한 뒤,
+      // analyser와 destination 사이에 GainNode를 삽입해서 볼륨 부스트
+      if (!gainNodeRef.current) {
+        const ctx = (lipsyncRef.current as any).audioContext as AudioContext;
+        const analyser = (lipsyncRef.current as any).analyser as AnalyserNode;
+        analyser.disconnect(ctx.destination);
+        const gain = ctx.createGain();
+        gain.gain.value = DEFAULT_VOLUME;
+        analyser.connect(gain);
+        gain.connect(ctx.destination);
+        gainNodeRef.current = gain;
+        console.log('[Lipsync] GainNode 삽입 완료, volume =', DEFAULT_VOLUME);
+      }
+
       await audio.play();
     } catch (e) {
       console.error('[Lipsync] audio.play() 실패 (autoplay 차단?)', e);
