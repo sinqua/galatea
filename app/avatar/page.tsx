@@ -21,10 +21,15 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
   const [vrm, setVrm] = useState<VRM | null>(null);
   const [clips, setClips] = useState<Record<string, THREE.AnimationClip>>({});
   const vrmRef = useRef<VRM | null>(null);
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const activeActionRef = useRef<THREE.AnimationAction | null>(null);
+  const clipsRef = useRef<Record<string, THREE.AnimationClip>>({});
 
   const mixer = useMemo(() => {
     if (!vrm) return null;
-    return new THREE.AnimationMixer(vrm.scene);
+    const m = new THREE.AnimationMixer(vrm.scene);
+    mixerRef.current = m;
+    return m;
   }, [vrm]);
 
   useEffect(() => {
@@ -68,15 +73,17 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
     if (!vrm) return;
 
     const load = async () => {
-      const [landing, idle, thankful] = await Promise.all([
+      const [landing, idle, talk] = await Promise.all([
         LoadMixamoAnimation("/animation/Landing.fbx", vrm),
         LoadMixamoAnimation("/animation/Idle.fbx", vrm),
-        LoadMixamoAnimation("/animation/Thankful.fbx", vrm),
+        LoadMixamoAnimation("/animation/Talk.fbx", vrm),
       ]);
       landing.name = "Landing";
       idle.name = "Idle";
-      thankful.name = "Thankful";
-      setClips({ Landing: landing, Idle: idle, Thankful: thankful });
+      talk.name = "Talk";
+      const loaded = { Landing: landing, Idle: idle, Talk: talk };
+      clipsRef.current = loaded;
+      setClips(loaded);
     };
 
     load();
@@ -97,6 +104,7 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
       if (e.action._clip.name === "Landing") {
         landingAction.fadeOut(0.5);
         idleAction.reset().fadeIn(0.5).play();
+        activeActionRef.current = idleAction;
       }
     };
 
@@ -105,7 +113,30 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
   }, [mixer, clips]);
 
   const getVrm = useCallback(() => vrmRef.current, []);
-  const { speak, update: lipsyncUpdate, debugRef } = useLipsync(getVrm);
+
+  const handleSpeakStart = useCallback(() => {
+    const m = mixerRef.current;
+    const c = clipsRef.current;
+    if (!m || !c.Talk) return;
+    const talkAction = m.clipAction(c.Talk);
+    talkAction.loop = THREE.LoopRepeat;
+    activeActionRef.current?.fadeOut(0.3);
+    talkAction.reset().fadeIn(0.3).play();
+    activeActionRef.current = talkAction;
+  }, []);
+
+  const handleSpeakEnd = useCallback(() => {
+    const m = mixerRef.current;
+    const c = clipsRef.current;
+    if (!m || !c.Idle) return;
+    const idleAction = m.clipAction(c.Idle);
+    idleAction.loop = THREE.LoopRepeat;
+    activeActionRef.current?.fadeOut(0.5);
+    idleAction.reset().fadeIn(0.5).play();
+    activeActionRef.current = idleAction;
+  }, []);
+
+  const { speak, update: lipsyncUpdate, debugRef } = useLipsync(getVrm, handleSpeakStart, handleSpeakEnd);
 
   // 디버그 ref를 부모에 전달
   useEffect(() => {
@@ -179,13 +210,13 @@ export default function AvatarPage() {
             <ClockIcon className="h-6 w-6 text-neutral-700" />
           </Link>
         </div>
-      {/* 디버그 오버레이 */}
+      {/* 디버그 오버레이
       <div className="fixed top-4 left-4 z-20 bg-black bg-opacity-70 text-white text-xs font-mono p-3 rounded-lg space-y-1 pointer-events-none">
         <div>🎙 audio: <span className="text-yellow-300">{lipsyncDebugRef.current?.audioState ?? 'idle'}</span></div>
         <div>👄 viseme: <span className="text-green-300">{lipsyncDebugRef.current?.viseme ?? '-'}</span></div>
         <div>📦 blob: <span className="text-blue-300">{lipsyncDebugRef.current?.blobSize ?? 0} bytes</span></div>
         <div>🎭 exprMgr: <span className="text-purple-300">{lipsyncDebugRef.current?.expressionManager ? 'OK' : 'null'}</span></div>
-      </div>
+      </div> */}
 
       <InputHistory onAIResponse={(audioBlob) => speakRef.current?.(audioBlob)} />
       </main>

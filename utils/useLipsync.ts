@@ -23,7 +23,11 @@ const VISEME_TO_VRM: Partial<Record<VISEMES, { name: string; weight: number }[]>
 const VRM_VISEME_NAMES = ["aa", "ih", "ou", "ee", "oh"] as const;
 
 
-export function useLipsync(getVrm: () => VRM | null) {
+export function useLipsync(
+  getVrm: () => VRM | null,
+  onSpeakStart?: () => void,
+  onSpeakEnd?: () => void,
+) {
   const lipsyncRef = useRef<Lipsync | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const debugRef = useRef({
@@ -85,8 +89,8 @@ export function useLipsync(getVrm: () => VRM | null) {
     audio.src = url;
     audioRef.current = audio;
 
-    audio.onplay  = () => { debugRef.current.audioState = 'playing'; console.log('[Lipsync] 오디오 재생 시작'); };
-    audio.onended = () => { debugRef.current.audioState = 'ended';   console.log('[Lipsync] 오디오 재생 완료'); };
+    audio.onplay  = () => { debugRef.current.audioState = 'playing'; onSpeakStart?.(); console.log('[Lipsync] 오디오 재생 시작'); };
+    audio.onended = () => { debugRef.current.audioState = 'ended';   onSpeakEnd?.();   console.log('[Lipsync] 오디오 재생 완료'); };
     audio.onerror = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
 
     // AudioContext 상태 로깅
