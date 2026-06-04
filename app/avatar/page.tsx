@@ -33,7 +33,7 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
     loader.register((parser) => new MToonMaterialLoaderPlugin(parser));
 
     loader.load(
-      "/experience/lvv.vrm",
+      "/experience/hero.vrm",
       (gltf) => {
         const loaded: VRM = gltf.userData.vrm;
         VRMUtils.removeUnnecessaryJoints(loaded.scene);
