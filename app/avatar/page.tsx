@@ -48,7 +48,9 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
           mat.toneMapped = false;
         });
 
+        loaded.scene.traverse((obj) => { obj.frustumCulled = false; });
         loaded.scene.rotation.y = Math.PI;
+        loaded.scene.visible = false;
         scene.add(loaded.scene);
         vrmRef.current = loaded;
         setVrm(loaded);
@@ -98,6 +100,7 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
 
     landingAction.loop = THREE.LoopOnce;
     landingAction.clampWhenFinished = true;
+    if (vrmRef.current) vrmRef.current.scene.visible = true;
     landingAction.play();
 
     const onFinished = (e: any) => {
