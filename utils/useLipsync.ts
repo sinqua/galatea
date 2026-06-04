@@ -22,7 +22,7 @@ const VISEME_TO_VRM: Partial<Record<VISEMES, { name: string; weight: number }[]>
 
 const VRM_VISEME_NAMES = ["aa", "ih", "ou", "ee", "oh"] as const;
 
-const DEFAULT_VOLUME = 1.5; // 1.0 이상으로 부스트 가능
+const DEFAULT_VOLUME = 3.0; // 1.0 이상으로 부스트 가능
 
 export function useLipsync(getVrm: () => VRM | null) {
   const lipsyncRef = useRef<Lipsync | null>(null);
