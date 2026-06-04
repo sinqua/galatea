@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useReducer } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -13,9 +13,10 @@ import { useLipsync } from "@/utils/useLipsync";
 
 interface VRMAvatarProps {
   onReady?: (speak: (audioBlob: Blob) => void) => void;
+  debugRef?: React.MutableRefObject<any>;
 }
 
-function VRMAvatar({ onReady }: VRMAvatarProps) {
+function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
   const { scene } = useThree();
   const [vrm, setVrm] = useState<VRM | null>(null);
   const [clips, setClips] = useState<Record<string, THREE.AnimationClip>>({});
@@ -104,8 +105,12 @@ function VRMAvatar({ onReady }: VRMAvatarProps) {
   }, [mixer, clips]);
 
   const getVrm = useCallback(() => vrmRef.current, []);
-  const { speak, update: lipsyncUpdate } = useLipsync(getVrm);
+  const { speak, update: lipsyncUpdate, debugRef } = useLipsync(getVrm);
 
+  // 디버그 ref를 부모에 전달
+  useEffect(() => {
+    if (externalDebugRef) externalDebugRef.current = debugRef.current;
+  });
 
   // VRM 준비되면 speak 함수를 부모에 노출
   useEffect(() => {
@@ -123,8 +128,17 @@ function VRMAvatar({ onReady }: VRMAvatarProps) {
 
 export default function AvatarPage() {
   const speakRef = useRef<((audioBlob: Blob) => void) | null>(null);
+  const lipsyncDebugRef = useRef<any>({});
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
+
   const handleReady = useCallback((speak: (audioBlob: Blob) => void) => {
     speakRef.current = speak;
+  }, []);
+
+  // 디버그 오버레이 1초마다 갱신
+  useEffect(() => {
+    const id = setInterval(forceUpdate, 500);
+    return () => clearInterval(id);
   }, []);
 
   return (
@@ -138,7 +152,7 @@ export default function AvatarPage() {
             <ambientLight intensity={0.8} />
             <directionalLight position={[1, 2, 2]} intensity={2.2} />
             <Suspense fallback={null}>
-              <VRMAvatar onReady={handleReady} />
+              <VRMAvatar onReady={handleReady} debugRef={lipsyncDebugRef} />
             </Suspense>
             <OrbitControls
               target={[0, 1, 0]}
@@ -165,6 +179,14 @@ export default function AvatarPage() {
             <ClockIcon className="h-6 w-6 text-neutral-700" />
           </Link>
         </div>
+      {/* 디버그 오버레이 */}
+      <div className="fixed top-4 left-4 z-20 bg-black bg-opacity-70 text-white text-xs font-mono p-3 rounded-lg space-y-1 pointer-events-none">
+        <div>🎙 audio: <span className="text-yellow-300">{lipsyncDebugRef.current?.audioState ?? 'idle'}</span></div>
+        <div>👄 viseme: <span className="text-green-300">{lipsyncDebugRef.current?.viseme ?? '-'}</span></div>
+        <div>📦 blob: <span className="text-blue-300">{lipsyncDebugRef.current?.blobSize ?? 0} bytes</span></div>
+        <div>🎭 exprMgr: <span className="text-purple-300">{lipsyncDebugRef.current?.expressionManager ? 'OK' : 'null'}</span></div>
+      </div>
+
       <InputHistory onAIResponse={(audioBlob) => speakRef.current?.(audioBlob)} />
       </main>
     </div>
