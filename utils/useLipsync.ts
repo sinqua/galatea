@@ -36,7 +36,21 @@ export function useLipsync(getVrm: () => VRM | null) {
   useEffect(() => {
     lipsyncRef.current = new Lipsync({ fftSize: 2048, historySize: 10 });
     console.log('[Lipsync] 초기화 완료');
-    return () => { lipsyncRef.current = null; };
+
+    // 유저가 페이지를 클릭하는 순간 AudioContext를 unlock
+    // (Web Audio API는 유저 제스처 직후에만 resume 가능)
+    const unlock = () => {
+      const ctx = (lipsyncRef.current as any)?.audioContext as AudioContext | undefined;
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().then(() => console.log('[Lipsync] AudioContext 사전 unlock 완료'));
+      }
+    };
+    document.addEventListener('click', unlock);
+
+    return () => {
+      document.removeEventListener('click', unlock);
+      lipsyncRef.current = null;
+    };
   }, []);
 
   const speak = useCallback(async (audioBlob: Blob) => {
