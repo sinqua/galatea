@@ -28,5 +28,5 @@ def hello_voice():
     return Response(
         audio_bytes,
         mimetype='audio/mpeg',
-        headers={'X-AI-Text': message}
+        headers={'X-AI-Text': message.replace('\n', ' ').replace('\r', ' ')}
     )
