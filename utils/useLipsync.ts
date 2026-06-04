@@ -76,9 +76,16 @@ export function useLipsync(getVrm: () => VRM | null) {
     audio.onerror = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
 
     try {
+      // AudioContext가 suspended면 명시적으로 resume 완료를 기다림
+      const ctx = (lipsyncRef.current as any).audioContext as AudioContext;
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+        console.log('[Lipsync] AudioContext resumed, state:', ctx.state);
+      }
+
       lipsyncRef.current.connectAudio(audio);
       await audio.play();
-      console.log('[Lipsync] 재생 시작');
+      console.log('[Lipsync] 재생 시작, AudioContext state:', ctx.state);
     } catch (e) {
       console.error('[Lipsync] 재생 실패:', e);
     }
