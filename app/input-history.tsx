@@ -34,14 +34,14 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
       setMessages([...messages, newMessage]);
       // onSubmit("GameManager", "GenerateVoice", inputValue);
 
-      // /voice 엔드포인트: MP3 오디오 반환, AI 텍스트는 X-AI-Text 헤더에 포함
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/voice`, {
         method: 'POST',
         body: new URLSearchParams({ text: inputValue }),
       });
 
-      const aiText = response.headers.get('X-AI-Text') ?? '';
-      const audioBlob = await response.blob();
+      const { text: aiText, audio: audioBase64 } = await response.json();
+      const audioBytes = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
+      const audioBlob = new Blob([audioBytes], { type: 'audio/mpeg' });
 
       const serverMessage: ChatMessage = {
         id: messages.length + 2,
