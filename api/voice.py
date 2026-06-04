@@ -11,7 +11,7 @@ def speech(userText: str) -> bytes:
         Text=ssml_text,
         TextType='ssml',
         OutputFormat='mp3',
-        VoiceId='Joanna',   # 영어 여성 음성. 한국어면 'Seoyeon' 사용
+        VoiceId='Seoyeon',   # 영어 여성 음성. 한국어면 'Seoyeon' 사용
         Engine='neural',
     )
 
