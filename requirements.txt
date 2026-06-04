@@ -3,3 +3,4 @@ flask-cors
 gunicorn
 anthropic
 python-dotenv
+boto3
