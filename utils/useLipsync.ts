@@ -41,8 +41,8 @@ export function useLipsync(
     lipsyncRef.current = new Lipsync({ fftSize: 2048, historySize: 10 });
     console.log('[Lipsync] 초기화 완료');
 
-    // 유저가 페이지를 클릭하는 순간 AudioContext를 unlock
-    // (Web Audio API는 유저 제스처 직후에만 resume 가능)
+    // 유저 제스처(클릭, 키 입력, 터치) 시 AudioContext unlock
+    // Enter 전송 등 click 이외의 경로에서도 오디오가 재생되도록 keydown·touchstart도 감지
     const unlock = () => {
       const ctx = (lipsyncRef.current as any)?.audioContext as AudioContext | undefined;
       if (ctx && ctx.state === 'suspended') {
@@ -50,9 +50,13 @@ export function useLipsync(
       }
     };
     document.addEventListener('click', unlock);
+    document.addEventListener('keydown', unlock);
+    document.addEventListener('touchstart', unlock);
 
     return () => {
       document.removeEventListener('click', unlock);
+      document.removeEventListener('keydown', unlock);
+      document.removeEventListener('touchstart', unlock);
       lipsyncRef.current = null;
     };
   }, []);
