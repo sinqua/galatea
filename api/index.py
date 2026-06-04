@@ -9,7 +9,7 @@ import voice
 import base64
 
 app = Flask(__name__)
-CORS(app, origins=os.getenv('ALLOWED_ORIGIN', '*'))
+CORS(app, origins=os.getenv('ALLOWED_ORIGIN', '*').split(','))
 
 @app.route('/', methods=['GET'])
 def hello_world():

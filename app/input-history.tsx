@@ -32,7 +32,7 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
         sender: 'user',
       };
       setMessages([...messages, newMessage]);
-      // onSubmit("GameManager", "GenerateVoice", inputValue);
+      setInputValue('');
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/voice`, {
         method: 'POST',
@@ -50,8 +50,6 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
       };
       setMessages((prevMessages) => [...prevMessages, serverMessage]);
       onAIResponse?.(audioBlob, aiText);
-
-      setInputValue('');
     }
   };
 
@@ -62,7 +60,7 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
 
   return (
     <div className="flex flex-col h-full fixed bottom-0 left-0 w-full pointer-events-none">
-      <div className="flex-grow overflow-y-auto p-4 flex flex-col">
+      <div className="flex-grow overflow-y-auto p-4 pt-20 flex flex-col">
         {messages.map((message) => (
           <div
             key={message.id}
