@@ -22,12 +22,10 @@ const VISEME_TO_VRM: Partial<Record<VISEMES, { name: string; weight: number }[]>
 
 const VRM_VISEME_NAMES = ["aa", "ih", "ou", "ee", "oh"] as const;
 
-const DEFAULT_VOLUME = 3.0; // 1.0 이상으로 부스트 가능
 
 export function useLipsync(getVrm: () => VRM | null) {
   const lipsyncRef = useRef<Lipsync | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
   const debugRef = useRef({
     audioState: 'idle' as 'idle' | 'playing' | 'ended' | 'error',
     viseme: 'viseme_sil',
@@ -38,7 +36,7 @@ export function useLipsync(getVrm: () => VRM | null) {
   useEffect(() => {
     lipsyncRef.current = new Lipsync({ fftSize: 2048, historySize: 10 });
     console.log('[Lipsync] 초기화 완료');
-    return () => { lipsyncRef.current = null; gainNodeRef.current = null; };
+    return () => { lipsyncRef.current = null; };
   }, []);
 
   const speak = useCallback(async (audioBlob: Blob) => {
@@ -78,33 +76,9 @@ export function useLipsync(getVrm: () => VRM | null) {
     audio.onerror = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
 
     try {
-      // wawa-lipsync의 내부 AudioContext와 analyser에 직접 접근
-      const ctx = (lipsyncRef.current as any).audioContext as AudioContext;
-      const analyser = (lipsyncRef.current as any).analyser as AnalyserNode;
-
-      // GainNode를 한 번만 생성 — analyser → gain → destination
-      if (!gainNodeRef.current) {
-        const gain = ctx.createGain();
-        gain.gain.value = DEFAULT_VOLUME;
-        gain.connect(ctx.destination);
-        gainNodeRef.current = gain;
-        console.log('[Lipsync] GainNode 생성, volume =', DEFAULT_VOLUME);
-      }
-
-      // wawa-lipsync의 connectAudio는 내부적으로
-      // MediaElementSource → analyser → ctx.destination 을 연결함.
-      // 그 뒤 analyser의 destination 연결만 끊고 gainNode로 교체
       lipsyncRef.current.connectAudio(audio);
-
-      try {
-        analyser.disconnect(ctx.destination);
-      } catch (_) {
-        // 이미 끊겨 있으면 무시
-      }
-      analyser.connect(gainNodeRef.current);
-
       await audio.play();
-      console.log('[Lipsync] 재생 시작, gain =', gainNodeRef.current.gain.value);
+      console.log('[Lipsync] 재생 시작');
     } catch (e) {
       console.error('[Lipsync] 재생 실패:', e);
     }
