@@ -33,7 +33,6 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
   }, [vrm]);
 
   useEffect(() => {
-    let cancelled = false;
     const loader = new GLTFLoader();
     loader.register((parser) => new VRMLoaderPlugin(parser));
     loader.register((parser) => new MToonMaterialLoaderPlugin(parser));
@@ -41,7 +40,6 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
     loader.load(
       "/experience/hero.vrm",
       (gltf) => {
-        if (cancelled) return;
         const loaded: VRM = gltf.userData.vrm;
         VRMUtils.removeUnnecessaryJoints(loaded.scene);
         VRMUtils.removeUnnecessaryVertices(loaded.scene);
@@ -62,7 +60,6 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
     );
 
     return () => {
-      cancelled = true;
       setVrm((prev) => {
         if (prev) {
           scene.remove(prev.scene);
@@ -76,15 +73,12 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
   // FBX 애니메이션 로드
   useEffect(() => {
     if (!vrm) return;
-    let cancelled = false;
-
     const load = async () => {
       const [landing, idle, talk] = await Promise.all([
         LoadMixamoAnimation("/animation/Landing.fbx", vrm),
         LoadMixamoAnimation("/animation/Idle.fbx", vrm),
         LoadMixamoAnimation("/animation/Talk.fbx", vrm),
       ]);
-      if (cancelled) return;
       landing.name = "Landing";
       idle.name = "Idle";
       talk.name = "Talk";
@@ -94,7 +88,6 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
     };
 
     load();
-    return () => { cancelled = true; };
   }, [vrm]);
 
   // Landing → Idle 순서로 재생
