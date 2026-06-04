@@ -75,19 +75,31 @@ export function useLipsync(getVrm: () => VRM | null) {
     audio.onended = () => { debugRef.current.audioState = 'ended';   console.log('[Lipsync] 오디오 재생 완료'); };
     audio.onerror = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
 
-    try {
-      // AudioContext가 suspended면 명시적으로 resume 완료를 기다림
-      const ctx = (lipsyncRef.current as any).audioContext as AudioContext;
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-        console.log('[Lipsync] AudioContext resumed, state:', ctx.state);
-      }
+    // AudioContext 상태 로깅
+    const ctx = (lipsyncRef.current as any).audioContext as AudioContext | undefined;
+    console.log('[Lipsync] AudioContext:', ctx ? `state=${ctx.state}` : 'undefined');
 
-      lipsyncRef.current.connectAudio(audio);
-      await audio.play();
-      console.log('[Lipsync] 재생 시작, AudioContext state:', ctx.state);
+    try {
+      if (ctx && ctx.state === 'suspended') {
+        await ctx.resume();
+        console.log('[Lipsync] AudioContext resumed →', ctx.state);
+      }
     } catch (e) {
-      console.error('[Lipsync] 재생 실패:', e);
+      console.warn('[Lipsync] ctx.resume() 실패 (무시하고 계속):', e);
+    }
+
+    try {
+      lipsyncRef.current.connectAudio(audio);
+      console.log('[Lipsync] connectAudio 완료');
+    } catch (e) {
+      console.error('[Lipsync] connectAudio 실패:', e);
+    }
+
+    try {
+      await audio.play();
+      console.log('[Lipsync] audio.play() 성공');
+    } catch (e) {
+      console.error('[Lipsync] audio.play() 실패:', e);
     }
   }, [getVrm]);
 
