@@ -53,6 +53,11 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
         loaded.scene.visible = false;
         scene.add(loaded.scene);
         vrmRef.current = loaded;
+
+        // 등록된 expression 이름 전체 출력 — 이름이 맞는지 확인용
+        const exprMap = loaded.expressionManager?.expressionMap;
+        console.log('[VRM] expressionMap keys:', exprMap ? Object.keys(exprMap) : 'none');
+
         setVrm(loaded);
       },
       undefined,

@@ -21,7 +21,17 @@ const VISEME_TO_VRM: Partial<Record<VISEMES, { name: string; weight: number }[]>
 };
 
 const VRM_VISEME_NAMES = ["aa", "ih", "ou", "ee", "oh"] as const;
-const EMOTION_NAMES = ["neutral", "joy", "angry", "sorrow", "fun"] as const;
+
+// 백엔드 emotion → VRM 1.0 expressionMap 키 변환
+// (VRM 0.x presetName이 @pixiv/three-vrm 로드 시 자동 변환됨)
+const EMOTION_TO_VRM: Record<string, string> = {
+  joy:     "happy",
+  angry:   "angry",
+  sorrow:  "sad",
+  fun:     "relaxed",
+  neutral: "neutral",
+};
+const VRM_EMOTION_NAMES = ["happy", "angry", "sad", "relaxed", "neutral"] as const;
 const EMOTION_WEIGHT = 0.8;
 
 
@@ -67,7 +77,7 @@ export function useLipsync(
     const vrm = getVrm();
     if (!vrm) return;
     VRM_VISEME_NAMES.forEach((name) => vrm.expressionManager?.setValue(name, 0));
-    EMOTION_NAMES.forEach((name) => vrm.expressionManager?.setValue(name, 0));
+    VRM_EMOTION_NAMES.forEach((name) => vrm.expressionManager?.setValue(name, 0));
     emotionRef.current = null;
     debugRef.current.emotion = 'none';
   }, [getVrm]);
@@ -100,10 +110,12 @@ export function useLipsync(
       URL.revokeObjectURL(audioRef.current.src);
     }
 
-    // 이전 emotion 초기화 후 새 emotion 설정
+    // 이전 emotion 초기화 후 새 emotion 설정 (VRM 1.0 키로 변환)
     clearExpressions();
-    emotionRef.current = emotion ?? null;
-    debugRef.current.emotion = emotion ?? 'none';
+    const vrmEmotion = emotion ? (EMOTION_TO_VRM[emotion] ?? null) : null;
+    emotionRef.current = vrmEmotion;
+    debugRef.current.emotion = vrmEmotion ?? 'none';
+    console.log(`[Lipsync] emotion 매핑: "${emotion}" → "${vrmEmotion}"`);
 
     const url = URL.createObjectURL(audioBlob);
     const audio = new Audio();
