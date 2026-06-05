@@ -21,7 +21,7 @@ const VISEME_TO_VRM: Partial<Record<VISEMES, { name: string; weight: number }[]>
 };
 
 const VRM_VISEME_NAMES = ["aa", "ih", "ou", "ee", "oh"] as const;
-const EMOTION_NAMES = ["blink", "joy", "angry", "sorrow", "fun"] as const;
+const EMOTION_NAMES = ["neutral", "joy", "angry", "sorrow", "fun"] as const;
 const EMOTION_WEIGHT = 0.8;
 
 

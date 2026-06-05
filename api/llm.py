@@ -79,7 +79,7 @@ def load_messages() -> List[Dict[str, Any]]:
         
     return messages
 
-EMOTION_TYPES = ["joy", "angry", "sorrow", "fun", "blink"]
+EMOTION_TYPES = ["joy", "angry", "sorrow", "fun", "neutral"]
 
 EMOTION_CLASSIFY_PROMPT = """You are an emotion classifier for a VRM avatar.
 Given a counselor's response text, classify its primary emotional tone into exactly one of these categories:
@@ -87,7 +87,7 @@ Given a counselor's response text, classify its primary emotional tone into exac
 - angry: frustrated, firm, assertive, concerned
 - sorrow: sad, empathetic to grief, melancholic
 - fun: playful, light-hearted, humorous
-- blink: neutral, calm, matter-of-fact
+- neutral: neutral, calm, matter-of-fact
 
 Reply with exactly one word from the list above. No punctuation, no explanation."""
 
@@ -100,7 +100,7 @@ def classify_emotion(message: str) -> str:
         messages=[{"role": "user", "content": message}],
     )
     emotion = response.content[0].text.strip().lower()
-    return emotion if emotion in EMOTION_TYPES else "blink"
+    return emotion if emotion in EMOTION_TYPES else "neutral"
 
 
 def chat_ai(user_input):
