@@ -21,6 +21,8 @@ const VISEME_TO_VRM: Partial<Record<VISEMES, { name: string; weight: number }[]>
 };
 
 const VRM_VISEME_NAMES = ["aa", "ih", "ou", "ee", "oh"] as const;
+const EMOTION_NAMES = ["blink", "joy", "angry", "sorrow", "fun"] as const;
+const EMOTION_WEIGHT = 0.8;
 
 
 export function useLipsync(
@@ -30,9 +32,11 @@ export function useLipsync(
 ) {
   const lipsyncRef = useRef<Lipsync | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const emotionRef = useRef<string | null>(null);
   const debugRef = useRef({
     audioState: 'idle' as 'idle' | 'playing' | 'ended' | 'error',
     viseme: 'viseme_sil',
+    emotion: 'none',
     blobSize: 0,
     expressionManager: false,
   });
@@ -41,8 +45,6 @@ export function useLipsync(
     lipsyncRef.current = new Lipsync({ fftSize: 2048, historySize: 10 });
     console.log('[Lipsync] 초기화 완료');
 
-    // 유저 제스처(클릭, 키 입력, 터치) 시 AudioContext unlock
-    // Enter 전송 등 click 이외의 경로에서도 오디오가 재생되도록 keydown·touchstart도 감지
     const unlock = () => {
       const ctx = (lipsyncRef.current as any)?.audioContext as AudioContext | undefined;
       if (ctx && ctx.state === 'suspended') {
@@ -61,11 +63,21 @@ export function useLipsync(
     };
   }, []);
 
-  const speak = useCallback(async (audioBlob: Blob) => {
+  const clearExpressions = useCallback(() => {
+    const vrm = getVrm();
+    if (!vrm) return;
+    VRM_VISEME_NAMES.forEach((name) => vrm.expressionManager?.setValue(name, 0));
+    EMOTION_NAMES.forEach((name) => vrm.expressionManager?.setValue(name, 0));
+    emotionRef.current = null;
+    debugRef.current.emotion = 'none';
+  }, [getVrm]);
+
+  const speak = useCallback(async (audioBlob: Blob, emotion?: string) => {
     const vrm = getVrm();
     console.log('[Lipsync] speak 호출 —', {
       blobSize: audioBlob.size,
       blobType: audioBlob.type,
+      emotion,
       vrmReady: !!vrm,
       lipsyncReady: !!lipsyncRef.current,
     });
@@ -88,16 +100,25 @@ export function useLipsync(
       URL.revokeObjectURL(audioRef.current.src);
     }
 
+    // 이전 emotion 초기화 후 새 emotion 설정
+    clearExpressions();
+    emotionRef.current = emotion ?? null;
+    debugRef.current.emotion = emotion ?? 'none';
+
     const url = URL.createObjectURL(audioBlob);
     const audio = new Audio();
     audio.src = url;
     audioRef.current = audio;
 
     audio.onplay  = () => { debugRef.current.audioState = 'playing'; onSpeakStart?.(); console.log('[Lipsync] 오디오 재생 시작'); };
-    audio.onended = () => { debugRef.current.audioState = 'ended';   onSpeakEnd?.();   console.log('[Lipsync] 오디오 재생 완료'); };
+    audio.onended = () => {
+      debugRef.current.audioState = 'ended';
+      onSpeakEnd?.();
+      console.log('[Lipsync] 오디오 재생 완료');
+      clearExpressions();
+    };
     audio.onerror = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
 
-    // AudioContext 상태 로깅
     const ctx = (lipsyncRef.current as any).audioContext as AudioContext | undefined;
     console.log('[Lipsync] AudioContext:', ctx ? `state=${ctx.state}` : 'undefined');
 
@@ -123,7 +144,7 @@ export function useLipsync(
     } catch (e) {
       console.error('[Lipsync] audio.play() 실패:', e);
     }
-  }, [getVrm]);
+  }, [getVrm, clearExpressions]);
 
   const update = useCallback(() => {
     const vrm = getVrm();
@@ -135,14 +156,20 @@ export function useLipsync(
     const currentViseme = lipsync.viseme;
     debugRef.current.viseme = currentViseme;
 
+    // viseme 초기화 후 현재 viseme 적용
     VRM_VISEME_NAMES.forEach((name) => {
       vrm.expressionManager?.setValue(name, 0);
     });
-
     const targets = VISEME_TO_VRM[currentViseme];
     targets?.forEach(({ name, weight }) => {
       vrm.expressionManager?.setValue(name, weight);
     });
+
+    // emotion 적용 (viseme와 동시에)
+    const emotion = emotionRef.current;
+    if (emotion) {
+      vrm.expressionManager?.setValue(emotion, EMOTION_WEIGHT);
+    }
   }, [getVrm]);
 
   return { speak, update, debugRef };

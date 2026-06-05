@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
 interface InputHistoryProps {
-  onAIResponse?: (audioBlob: Blob, text: string) => void;
+  onAIResponse?: (audioBlob: Blob, text: string, emotion: string) => void;
 }
 
 interface ChatMessage {
@@ -39,7 +39,7 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
         body: new URLSearchParams({ text: inputValue }),
       });
 
-      const { text: aiText, audio: audioBase64 } = await response.json();
+      const { text: aiText, audio: audioBase64, emotion } = await response.json();
       const audioBytes = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
       const audioBlob = new Blob([audioBytes], { type: 'audio/mpeg' });
 
@@ -49,7 +49,7 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
         sender: 'ai',
       };
       setMessages((prevMessages) => [...prevMessages, serverMessage]);
-      onAIResponse?.(audioBlob, aiText);
+      onAIResponse?.(audioBlob, aiText, emotion ?? 'neutral');
     }
   };
 
