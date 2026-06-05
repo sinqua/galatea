@@ -35,6 +35,12 @@ const VRM_EMOTION_NAMES = ["happy", "angry", "sad", "relaxed", "neutral"] as con
 const EMOTION_WEIGHT = 1.0;
 const EMOTION_DURATION_MS = 2000;
 
+// 자동 눈 깜빡임 타이밍 설정
+const BLINK_CLOSE_MS = 80;
+const BLINK_OPEN_MS  = 80;
+const BLINK_INTERVAL_MIN_MS = 2000;
+const BLINK_INTERVAL_MAX_MS = 5000;
+
 
 export function useLipsync(
   getVrm: () => VRM | null,
@@ -45,6 +51,11 @@ export function useLipsync(
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const emotionRef = useRef<string | null>(null);
   const emotionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blinkRef = useRef({
+    phase: 'idle' as 'idle' | 'closing' | 'opening',
+    phaseStartTime: 0,
+    nextBlinkTime: performance.now() + 1000 + Math.random() * 3000,
+  });
   const debugRef = useRef({
     audioState: 'idle' as 'idle' | 'playing' | 'ended' | 'error',
     viseme: 'viseme_sil',
@@ -121,7 +132,6 @@ export function useLipsync(
     debugRef.current.emotion = vrmEmotion ?? 'none';
     console.log(`[Lipsync] emotion 매핑: "${emotion}" → "${vrmEmotion}"`);
 
-    // 1초 후 emotion 기본값(neutral)으로 복귀
     if (vrmEmotion) {
       emotionTimerRef.current = setTimeout(() => {
         VRM_EMOTION_NAMES.forEach((name) => getVrm()?.expressionManager?.setValue(name, 0));
@@ -173,15 +183,42 @@ export function useLipsync(
 
   const update = useCallback(() => {
     const vrm = getVrm();
+    if (!vrm) return;
+
+    // 자동 눈 깜빡임 — 오디오 상태와 무관하게 매 프레임 실행
+    const blink = blinkRef.current;
+    const now = performance.now();
+    if (blink.phase === 'idle') {
+      if (now >= blink.nextBlinkTime) {
+        blink.phase = 'closing';
+        blink.phaseStartTime = now;
+      }
+    } else if (blink.phase === 'closing') {
+      const t = Math.min((now - blink.phaseStartTime) / BLINK_CLOSE_MS, 1);
+      vrm.expressionManager?.setValue('blink', t);
+      if (t >= 1) {
+        blink.phase = 'opening';
+        blink.phaseStartTime = now;
+      }
+    } else if (blink.phase === 'opening') {
+      const t = Math.min((now - blink.phaseStartTime) / BLINK_OPEN_MS, 1);
+      vrm.expressionManager?.setValue('blink', 1 - t);
+      if (t >= 1) {
+        vrm.expressionManager?.setValue('blink', 0);
+        blink.phase = 'idle';
+        blink.nextBlinkTime = now + BLINK_INTERVAL_MIN_MS + Math.random() * (BLINK_INTERVAL_MAX_MS - BLINK_INTERVAL_MIN_MS);
+      }
+    }
+
+    // 립싱크 — 오디오 재생 중에만 실행
     const lipsync = lipsyncRef.current;
     const audio = audioRef.current;
-    if (!vrm || !lipsync || !audio || audio.paused) return;
+    if (!lipsync || !audio || audio.paused) return;
 
     lipsync.processAudio();
     const currentViseme = lipsync.viseme;
     debugRef.current.viseme = currentViseme;
 
-    // viseme 초기화 후 현재 viseme 적용
     VRM_VISEME_NAMES.forEach((name) => {
       vrm.expressionManager?.setValue(name, 0);
     });
@@ -190,7 +227,6 @@ export function useLipsync(
       vrm.expressionManager?.setValue(name, weight);
     });
 
-    // emotion 적용 (viseme와 동시에)
     const emotion = emotionRef.current;
     if (emotion) {
       vrm.expressionManager?.setValue(emotion, EMOTION_WEIGHT);
