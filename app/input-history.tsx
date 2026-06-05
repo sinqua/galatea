@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
 interface InputHistoryProps {
-  onSubmit: (objectName: string, methodName: string, message: string) => void;
+  onAIResponse?: (audioBlob: Blob, text: string) => void;
 }
 
 interface ChatMessage {
   id: number;
   text: string;
+  sender: 'user' | 'ai';
 }
 
-const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
+const InputHistory: React.FC<InputHistoryProps> = ({ onAIResponse }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -23,29 +29,27 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
       const newMessage: ChatMessage = {
         id: messages.length + 1,
         text: inputValue,
+        sender: 'user',
       };
       setMessages([...messages, newMessage]);
-      onSubmit("GameManager", "GenerateVoice", inputValue);
+      setInputValue('');
 
-      // POST request to the server
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/textonly`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/voice`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: inputValue }),
+        body: new URLSearchParams({ text: inputValue }),
       });
 
-      console.log(response);
-      const result = await response.json();
+      const { text: aiText, audio: audioBase64 } = await response.json();
+      const audioBytes = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
+      const audioBlob = new Blob([audioBytes], { type: 'audio/mpeg' });
+
       const serverMessage: ChatMessage = {
         id: messages.length + 2,
-        text: result.message,
+        text: aiText,
+        sender: 'ai',
       };
-      console.log(result.message);
       setMessages((prevMessages) => [...prevMessages, serverMessage]);
-
-      setInputValue('');
+      onAIResponse?.(audioBlob, aiText);
     }
   };
 
@@ -55,17 +59,25 @@ const InputHistory: React.FC<InputHistoryProps> = ({ onSubmit }) => {
   };
 
   return (
-    <div className="flex flex-col h-full fixed bottom-0 left-0 w-full">
-      <div className="flex-grow overflow-y-auto p-4 flex flex-col-reverse">
+    <div className="flex flex-col h-full fixed bottom-0 left-0 w-full pointer-events-none">
+      <div className="flex-grow overflow-y-auto p-4 pt-20 flex flex-col">
         {messages.map((message) => (
-          <div key={message.id} className="mb-2 p-2 bg-blue-500 text-white rounded-lg self-end max-w-xs">
+          <div
+            key={message.id}
+            className={`mb-2 p-2 rounded-lg max-w-xs whitespace-pre-wrap pointer-events-auto ${
+              message.sender === 'user'
+                ? 'bg-blue-500 text-white self-end'
+                : 'bg-gray-200 text-gray-900 self-start dark:bg-gray-700 dark:text-white'
+            }`}
+          >
             {message.text}
           </div>
         ))}
+        <div ref={bottomRef} />
       </div>
       <form
         onSubmit={handleSubmit}
-        className="flex p-4 bg-white dark:bg-gray-800 shadow-lg"
+        className="flex p-4 bg-white dark:bg-gray-800 shadow-lg pointer-events-auto"
       >
         <input
           type="text"
