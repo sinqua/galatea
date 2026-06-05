@@ -32,7 +32,8 @@ const EMOTION_TO_VRM: Record<string, string> = {
   neutral: "neutral",
 };
 const VRM_EMOTION_NAMES = ["happy", "angry", "sad", "relaxed", "neutral"] as const;
-const EMOTION_WEIGHT = 0.8;
+const EMOTION_WEIGHT = 1.0;
+const EMOTION_DURATION_MS = 2000;
 
 
 export function useLipsync(
@@ -43,6 +44,7 @@ export function useLipsync(
   const lipsyncRef = useRef<Lipsync | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const emotionRef = useRef<string | null>(null);
+  const emotionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debugRef = useRef({
     audioState: 'idle' as 'idle' | 'playing' | 'ended' | 'error',
     viseme: 'viseme_sil',
@@ -69,6 +71,7 @@ export function useLipsync(
       document.removeEventListener('click', unlock);
       document.removeEventListener('keydown', unlock);
       document.removeEventListener('touchstart', unlock);
+      if (emotionTimerRef.current) clearTimeout(emotionTimerRef.current);
       lipsyncRef.current = null;
     };
   }, []);
@@ -110,12 +113,22 @@ export function useLipsync(
       URL.revokeObjectURL(audioRef.current.src);
     }
 
-    // 이전 emotion 초기화 후 새 emotion 설정 (VRM 1.0 키로 변환)
+    // 이전 emotion 타이머 취소 후 새 emotion 설정 (VRM 1.0 키로 변환)
+    if (emotionTimerRef.current) clearTimeout(emotionTimerRef.current);
     clearExpressions();
     const vrmEmotion = emotion ? (EMOTION_TO_VRM[emotion] ?? null) : null;
     emotionRef.current = vrmEmotion;
     debugRef.current.emotion = vrmEmotion ?? 'none';
     console.log(`[Lipsync] emotion 매핑: "${emotion}" → "${vrmEmotion}"`);
+
+    // 1초 후 emotion 기본값(neutral)으로 복귀
+    if (vrmEmotion) {
+      emotionTimerRef.current = setTimeout(() => {
+        VRM_EMOTION_NAMES.forEach((name) => getVrm()?.expressionManager?.setValue(name, 0));
+        emotionRef.current = null;
+        debugRef.current.emotion = 'none';
+      }, EMOTION_DURATION_MS);
+    }
 
     const url = URL.createObjectURL(audioBlob);
     const audio = new Audio();
