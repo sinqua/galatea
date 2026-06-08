@@ -1,17 +1,30 @@
+"""
+llm.py — Anthropic API 호출 전담
+
+담당:
+  - chat_ai / chat_ai_stream : 사용자 메시지에 응답
+  - classify_emotion         : 감정 분류
+  - summarize_session        : 세션 요약 (Layer 1)
+  - extract_patterns         : 패턴 추출 (Layer 2)
+  - update_profile           : 장기 프로필 갱신 (Layer 3)
+
+DB 접근 및 세션 관리는 db.py / memory.py 에서 처리한다.
+"""
+
 import os
-import sqlite3
-from typing import List, Dict, Any
+from typing import List, Dict, Generator
 import anthropic
 from dotenv import load_dotenv
+import db
+import memory
 
-# 프로젝트 루트(cognition의 상위)의 .env를 로드 — 실행 위치와 무관하게 동작
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-# Anthropic 클라이언트 (ANTHROPIC_API_KEY 환경변수에서 키를 읽음)
 client = anthropic.Anthropic()
 
-# 심리상담사 페르소나 시스템 프롬프트 (chat_ai / chat_ai_stream 공용)
-SYSTEM_PROMPT = """You are a professional psychological counselor named 'Galatea'.
+# ── 시스템 프롬프트 ────────────────────────────────────
+
+BASE_SYSTEM_PROMPT = """You are a professional psychological counselor named 'Galatea'.
 You analyze journals or concerns written by users and provide insightful feedback.
 You always maintain korean language and provide empathetic and constructive responses.
 
@@ -38,46 +51,38 @@ Important Limitations:
 - Recommend professional consultation if serious mental health issues are suspected.
 - Respect users' autonomy and take a collaborative rather than directive approach."""
 
-# 데이터베이스 초기화
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'journal.db')
+SUMMARIZE_PROMPT = """당신은 심리상담 세션을 분석하는 전문가입니다.
+아래의 상담 대화를 읽고 다음 항목을 간결하게 요약해 주세요:
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            role TEXT,
-            content TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+1. 주요 감정 상태 (예: 불안, 슬픔, 안도 등)
+2. 핵심 이야기 주제 (예: 직장 갈등, 가족 관계 등)
+3. 사용자의 심리적 상태 변화 (대화 전후 비교)
+4. 주목할 만한 인사이트나 패턴
 
-# 초기화
-init_db()
+3~5문장으로 요약하며, 마크다운 없이 평문으로 작성하세요."""
 
-# 메시지를 데이터베이스에 저장
-def save_message(role: str, content: str, images: str = None):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('INSERT INTO messages (role, content) VALUES (?, ?)', (role, content))
-    conn.commit()
-    conn.close()
+PATTERN_PROMPT = """당신은 장기 심리상담 기록을 분석하는 전문가입니다.
+아래는 여러 세션의 요약입니다. 이를 읽고 반복적으로 나타나는 심리 패턴과 주제를 추출해 주세요.
 
-# 데이터베이스에서 메시지를 불러오기
-def load_messages() -> List[Dict[str, Any]]:
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('SELECT role, content FROM messages')
-    rows = c.fetchall()
-    conn.close()
-    messages = []
-    for row in rows:
-        message = {'role': row[0], 'content': row[1]}
-        messages.append(message)
-        
-    return messages
+분석 항목:
+1. 반복 등장하는 감정 또는 상황
+2. 사용자의 핵심 고민 영역
+3. 시간에 따른 변화나 개선의 징후
+4. 상담사가 주의 깊게 살펴야 할 부분
+
+5~8문장으로 작성하며, 마크다운 없이 평문으로 작성하세요."""
+
+PROFILE_PROMPT = """당신은 장기 심리상담 기록을 바탕으로 내담자 프로필을 관리하는 전문가입니다.
+기존 프로필(있을 경우)과 새로운 패턴 분석 및 최근 세션 기록을 종합하여
+업데이트된 내담자 장기 이해 프로필을 작성해 주세요.
+
+포함 항목:
+1. 내담자의 핵심 성향과 특성
+2. 지속적인 고민과 갈등 영역
+3. 성장과 변화의 흐름
+4. 향후 상담에서 유의해야 할 맥락
+
+10문장 이내로 작성하며, 마크다운 없이 평문으로 작성하세요."""
 
 EMOTION_TYPES = ["joy", "angry", "sorrow", "fun", "neutral"]
 
@@ -92,6 +97,67 @@ Given a counselor's response text, classify its primary emotional tone into exac
 Reply with exactly one word from the list above. No punctuation, no explanation."""
 
 
+# ── 시스템 프롬프트 조립 ──────────────────────────────
+
+def _build_system_messages() -> list:
+    """기억 컨텍스트를 포함한 system 메시지 블록을 반환한다."""
+    mem_context = memory.build_memory_context()
+    full_prompt = f"{BASE_SYSTEM_PROMPT}\n\n{mem_context}" if mem_context else BASE_SYSTEM_PROMPT
+
+    return [{
+        "type": "text",
+        "text": full_prompt,
+        "cache_control": {"type": "ephemeral"},
+    }]
+
+
+# ── 채팅 ──────────────────────────────────────────────
+
+def chat_ai(user_input: str) -> str:
+    session_id = memory.get_or_create_today_session()
+    messages = db.load_session_messages(session_id)
+    messages.append({'role': 'user', 'content': user_input})
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=16000,
+        system=_build_system_messages(),
+        messages=messages,
+    )
+
+    reply = "".join(block.text for block in response.content if block.type == "text")
+
+    db.save_message(session_id, 'user', user_input)
+    db.save_message(session_id, 'assistant', reply)
+
+    return reply
+
+
+def chat_ai_stream(user_input: str) -> Generator[str, None, None]:
+    """SSE 스트리밍용. 텍스트 청크를 yield하고, 완료 후 DB에 저장한다."""
+    session_id = memory.get_or_create_today_session()
+    messages = db.load_session_messages(session_id)
+    messages.append({'role': 'user', 'content': user_input})
+
+    full_reply_parts = []
+
+    with client.messages.stream(
+        model="claude-sonnet-4-6",
+        max_tokens=16000,
+        system=_build_system_messages(),
+        messages=messages,
+    ) as stream:
+        for text in stream.text_stream:
+            full_reply_parts.append(text)
+            yield text
+
+    reply = ''.join(full_reply_parts)
+    db.save_message(session_id, 'user', user_input)
+    db.save_message(session_id, 'assistant', reply)
+
+
+# ── 감정 분류 ─────────────────────────────────────────
+
 def classify_emotion(message: str) -> str:
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
@@ -103,29 +169,54 @@ def classify_emotion(message: str) -> str:
     return emotion if emotion in EMOTION_TYPES else "neutral"
 
 
-def chat_ai(user_input):
-    # 데이터베이스에서 대화 히스토리 불러오기 (DB 형식이 Anthropic 메시지 형식과 동일)
-    messages = load_messages()
-    messages.append({'role': 'user', 'content': user_input})
+# ── 기억 레이어 생성 ──────────────────────────────────
+
+def summarize_session(messages: List[Dict], date: str) -> str:
+    """Layer 1: 세션 대화를 요약한다."""
+    conversation = "\n".join(
+        f"{'사용자' if m['role'] == 'user' else 'Galatea'}: {m['content']}"
+        for m in messages
+    )
+    prompt = f"날짜: {date}\n\n대화 내용:\n{conversation}"
+
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1000,
+        system=SUMMARIZE_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text.strip()
+
+
+def extract_patterns(summaries: List[str]) -> str:
+    """Layer 2: 여러 세션 요약에서 반복 패턴을 추출한다."""
+    content = "\n\n".join(summaries)
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=16000,
-        system=[{
-            "type": "text",
-            "text": SYSTEM_PROMPT,
-            "cache_control": {"type": "ephemeral"},  # 재사용되는 시스템 프롬프트 캐싱
-        }],
-        messages=messages,
+        max_tokens=2000,
+        system=PATTERN_PROMPT,
+        messages=[{"role": "user", "content": content}],
     )
+    return response.content[0].text.strip()
 
-    # 텍스트 블록만 합쳐서 응답 추출
-    reply = "".join(block.text for block in response.content if block.type == "text")
 
-    # 메시지를 데이터베이스에 저장
-    save_message('user', user_input)
-    save_message('assistant', reply)
+def update_profile(current_profile: str, pattern_content: str, recent_summaries: str) -> str:
+    """Layer 3: 기존 프로필 + 새 패턴으로 장기 프로필을 갱신한다."""
+    parts = []
+    if current_profile:
+        parts.append(f"[기존 프로필]\n{current_profile}")
+    if pattern_content:
+        parts.append(f"[최신 패턴 분석]\n{pattern_content}")
+    if recent_summaries:
+        parts.append(f"[최근 세션 요약]\n{recent_summaries}")
 
-    print(reply + '\n')
+    content = "\n\n".join(parts)
 
-    return reply
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=2000,
+        system=PROFILE_PROMPT,
+        messages=[{"role": "user", "content": content}],
+    )
+    return response.content[0].text.strip()
