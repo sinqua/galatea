@@ -12,7 +12,7 @@ import { LoadMixamoAnimation } from "@/utils/LoadMixamoAnimation";
 import { useLipsync } from "@/utils/useLipsync";
 
 interface VRMAvatarProps {
-  onReady?: (speak: (audioBlob: Blob) => void) => void;
+  onReady?: (speak: (audioBlob: Blob, emotion?: string) => void) => void;
   debugRef?: React.MutableRefObject<any>;
 }
 
@@ -53,6 +53,11 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
         loaded.scene.visible = false;
         scene.add(loaded.scene);
         vrmRef.current = loaded;
+
+        // 등록된 expression 이름 전체 출력 — 이름이 맞는지 확인용
+        const exprMap = loaded.expressionManager?.expressionMap;
+        console.log('[VRM] expressionMap keys:', exprMap ? Object.keys(exprMap) : 'none');
+
         setVrm(loaded);
       },
       undefined,
@@ -160,11 +165,11 @@ function VRMAvatar({ onReady, debugRef: externalDebugRef }: VRMAvatarProps) {
 }
 
 export default function AvatarPage() {
-  const speakRef = useRef<((audioBlob: Blob) => void) | null>(null);
+  const speakRef = useRef<((audioBlob: Blob, emotion?: string) => void) | null>(null);
   const lipsyncDebugRef = useRef<any>({});
   const [, forceUpdate] = useReducer(x => x + 1, 0);
 
-  const handleReady = useCallback((speak: (audioBlob: Blob) => void) => {
+  const handleReady = useCallback((speak: (audioBlob: Blob, emotion?: string) => void) => {
     speakRef.current = speak;
   }, []);
 
@@ -220,7 +225,7 @@ export default function AvatarPage() {
         <div>🎭 exprMgr: <span className="text-purple-300">{lipsyncDebugRef.current?.expressionManager ? 'OK' : 'null'}</span></div>
       </div> */}
 
-      <InputHistory onAIResponse={(audioBlob) => speakRef.current?.(audioBlob)} />
+      <InputHistory onAIResponse={(audioBlob, _text, emotion) => speakRef.current?.(audioBlob, emotion)} />
       </main>
     </div>
   );

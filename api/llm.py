@@ -79,6 +79,30 @@ def load_messages() -> List[Dict[str, Any]]:
         
     return messages
 
+EMOTION_TYPES = ["joy", "angry", "sorrow", "fun", "neutral"]
+
+EMOTION_CLASSIFY_PROMPT = """You are an emotion classifier for a VRM avatar.
+Given a counselor's response text, classify its primary emotional tone into exactly one of these categories:
+- joy: happy, encouraging, celebratory, warm
+- angry: frustrated, firm, assertive, concerned
+- sorrow: sad, empathetic to grief, melancholic
+- fun: playful, light-hearted, humorous
+- neutral: neutral, calm, matter-of-fact
+
+Reply with exactly one word from the list above. No punctuation, no explanation."""
+
+
+def classify_emotion(message: str) -> str:
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=10,
+        system=EMOTION_CLASSIFY_PROMPT,
+        messages=[{"role": "user", "content": message}],
+    )
+    emotion = response.content[0].text.strip().lower()
+    return emotion if emotion in EMOTION_TYPES else "neutral"
+
+
 def chat_ai(user_input):
     # 데이터베이스에서 대화 히스토리 불러오기 (DB 형식이 Anthropic 메시지 형식과 동일)
     messages = load_messages()

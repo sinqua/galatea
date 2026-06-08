@@ -25,8 +25,10 @@ def hello_text2():
 def hello_voice():
     text = request.form['text']
     message = llm.chat_ai(text)
+    emotion = llm.classify_emotion(message)
     audio_bytes = voice.speech(message)
     return jsonify({
         'text': message,
         'audio': base64.b64encode(audio_bytes).decode('utf-8'),
+        'emotion': emotion,
     })
