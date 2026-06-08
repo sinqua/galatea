@@ -140,59 +140,45 @@ export function useLipsync(
       }, EMOTION_DURATION_MS);
     }
 
-    const ctx = (lipsyncRef.current as any).audioContext as AudioContext | undefined;
-    console.log('[Lipsync] AudioContext:', ctx ? `state=${ctx.state}` : 'undefined');
-
-    if (ctx?.state === 'suspended') {
-      try { await ctx.resume(); } catch (e) { console.warn('[Lipsync] ctx.resume() 실패:', e); }
-    }
-
-    // localhost는 audio.play()가 허용되지만 프로덕션 도메인에서는
-    // 비동기 응답 후 호출 시 NotAllowedError가 발생한다.
-    // unlock된 AudioContext 경로(AudioBufferSourceNode)는 도메인 무관하게 허용된다.
-    if (ctx) {
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-
-      const url = URL.createObjectURL(audioBlob);
-      const audio = new Audio();
-      audio.src = url;
-      audio.muted = true;
-      audioRef.current = audio;
-
-      audio.onplay  = () => { debugRef.current.audioState = 'playing'; onSpeakStart?.(); };
-      audio.onended = () => {
-        debugRef.current.audioState = 'ended';
-        onSpeakEnd?.();
-        clearExpressions();
-        URL.revokeObjectURL(url);
-      };
-      audio.onerror = (e) => { debugRef.current.audioState = 'error'; console.error('[Lipsync] 오디오 에러', e); };
-
-      try { lipsyncRef.current.connectAudio(audio); } catch (e) { console.error('[Lipsync] connectAudio 실패:', e); }
-
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      source.onended = () => { if (!audio.ended) audio.dispatchEvent(new Event('ended')); };
-      source.start(0);
-      audio.play().catch(() => {}); // muted — 실패해도 무방
-      console.log('[Lipsync] AudioBufferSource 재생 시작');
-      return;
-    }
-
-    // AudioContext 없는 폴백
     const url = URL.createObjectURL(audioBlob);
     const audio = new Audio();
     audio.src = url;
     audioRef.current = audio;
 
-    audio.onplay  = () => { debugRef.current.audioState = 'playing'; onSpeakStart?.(); };
-    audio.onended = () => { debugRef.current.audioState = 'ended'; onSpeakEnd?.(); clearExpressions(); };
-    audio.onerror = (e) => { debugRef.current.audioState = 'error'; console.error('[Lipsync] 오디오 에러', e); };
+    audio.onplay  = () => { debugRef.current.audioState = 'playing'; onSpeakStart?.(); console.log('[Lipsync] 오디오 재생 시작'); };
+    audio.onended = () => {
+      debugRef.current.audioState = 'ended';
+      onSpeakEnd?.();
+      console.log('[Lipsync] 오디오 재생 완료');
+      clearExpressions();
+    };
+    audio.onerror = (e) => { debugRef.current.audioState = 'error';  console.error('[Lipsync] 오디오 에러', e); };
 
-    try { lipsyncRef.current.connectAudio(audio); } catch (e) { console.error('[Lipsync] connectAudio 실패:', e); }
-    try { await audio.play(); } catch (e) { console.error('[Lipsync] audio.play() 실패:', e); }
+    const ctx = (lipsyncRef.current as any).audioContext as AudioContext | undefined;
+    console.log('[Lipsync] AudioContext:', ctx ? `state=${ctx.state}` : 'undefined');
+
+    try {
+      if (ctx && ctx.state === 'suspended') {
+        await ctx.resume();
+        console.log('[Lipsync] AudioContext resumed →', ctx.state);
+      }
+    } catch (e) {
+      console.warn('[Lipsync] ctx.resume() 실패 (무시하고 계속):', e);
+    }
+
+    try {
+      lipsyncRef.current.connectAudio(audio);
+      console.log('[Lipsync] connectAudio 완료');
+    } catch (e) {
+      console.error('[Lipsync] connectAudio 실패:', e);
+    }
+
+    try {
+      await audio.play();
+      console.log('[Lipsync] audio.play() 성공');
+    } catch (e) {
+      console.error('[Lipsync] audio.play() 실패:', e);
+    }
   }, [getVrm, clearExpressions]);
 
   const update = useCallback(() => {
